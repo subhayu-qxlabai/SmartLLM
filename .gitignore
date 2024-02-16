@@ -1,0 +1,6 @@
+env/
+venv/
+datasets/
+data/
+generated/
+__pycache__/
