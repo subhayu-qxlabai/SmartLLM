@@ -1,15 +1,14 @@
-from multiprocessing import Pool
 from pathlib import Path
 from typing import Callable
+from multiprocessing import Pool
 from itertools import chain, zip_longest
-
-from tqdm import tqdm
 
 from dataset_gen.topic_generator import TopicGenerator
 from dataset_gen.question_generator import QuestionGenerator
 from dataset_gen.split_generator import QuestionSplitGenerator
 from dataset_gen.step_input_generator import StepInputGenerator
 from dataset_gen.step_output_generator import StepOutputGenerator
+from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
 from models.llm_dataset import (
     LLMType,
@@ -22,21 +21,23 @@ class DatasetGenerator:
     def __init__(
         self,
         dump_dir: str | Path = "generated/dataset",
-        generated_topics_path: str | Path = "generated/topics.txt",
+        generated_topics_file: str | Path = "topics.txt",
         verbose=True,
         dump_rows=True,
         dump_internal=False,
         validate=True,
         local_embeddings=False,
+        vectorstore: FaissDB | None = None,
     ):
         self.dump_dir = Path(dump_dir)
-        self.generated_topics_path = Path(generated_topics_path)
+        self.generated_topics_path = self.dump_dir / generated_topics_file
         self.verbose = verbose
         self.dataset = LLMDataset()
         self.dump_rows = dump_rows
         self.dump_internal = dump_internal
         self.validate = validate
         self.local_embeddings = local_embeddings
+        self.vectorstore = vectorstore
 
     def _retry(self, func: Callable, *args, **kwargs):
         max_retries: int = kwargs.pop("max_retries", 3)
@@ -70,12 +71,13 @@ class DatasetGenerator:
             strict=True,
         )
         split_models: list[QuestionSplit | None] = [
-            QuestionSplitGenerator()._to_model(split, QuestionSplit)
-            for split in splits
+            QuestionSplitGenerator()._to_model(split, QuestionSplit) for split in splits
         ]
         step_inputs = [
             (
-                StepInputGenerator(verbose=self.verbose).generate(
+                StepInputGenerator(
+                    verbose=self.verbose, vectorstore=self.vectorstore
+                ).generate(
                     split, dump=self.dump_internal, by_vector=self.local_embeddings
                 )
                 if split is not None and not split.can_i_answer
@@ -113,16 +115,16 @@ class DatasetGenerator:
             uid=llm1_row.uid, llm=LLMType.LLM2, input=generated[2], output=generated[3]
         )
         return [llm1_row, llm2_row]
-    
+
     def _load_generated_topics(self) -> list[str]:
         if not self.generated_topics_path.exists():
             return []
         with open(self.generated_topics_path, "r") as f:
             return f.readlines()
-    
+
     def _add_generated_topics(self, topics: list[str]):
         with open(self.generated_topics_path, "a") as f:
-            f.write("\n".join(topics)+"\n")
+            f.write("\n".join(topics) + "\n")
 
     def _add_generated_topic(self, topic: str):
         self._add_generated_topics([topic])
@@ -156,7 +158,7 @@ class DatasetGenerator:
         else:
             self.dataset.rows.extend(rows)
         return rows
-    
+
     def generate_parallel(self, topics: list[str], multiplier=1, n_processes=4):
         """
         Generate results in parallel using multiprocessing.Pool.
@@ -170,9 +172,11 @@ class DatasetGenerator:
             list[DatasetRow]: A list of generated results.
         """
         with Pool(n_processes) as p:
-            generated = p.starmap(self.generate, [(topic, multiplier) for topic in topics])
+            generated = p.starmap(
+                self.generate, [(topic, multiplier) for topic in topics]
+            )
         return list(chain(*generated))
-    
+
     def generate_auto(self, n=5, multiplier=1, n_processes=4):
         topics = TopicGenerator().generate(n, dump=True)
         if self.verbose:

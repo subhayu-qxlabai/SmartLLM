@@ -15,7 +15,8 @@ class StepInputGenerator(BaseModelValidator):
         dump_dir: str | Path = "generated/step_input",
         file_prefix: str = "s",
         verbose: bool = True,
-        vectorstore: str | Path = "functions.pkl",
+        vectorstore_path: str | Path = "functions.pkl",
+        vectorstore: FaissDB | None = None,
         *args,
         **kwargs,
     ):
@@ -25,10 +26,13 @@ class StepInputGenerator(BaseModelValidator):
         )
         self.generated: str = None
         self.verbose = verbose
-        self.vectorstore = Path(vectorstore)
-        if not self.vectorstore.exists():
-            raise ValueError(f"vectorstore {vectorstore!r} does not exist")
-        self.vdb = FaissDB(filename=vectorstore)
+        self.vectorstore_path = Path(vectorstore_path)
+        if isinstance(vectorstore, FaissDB):
+            self.vdb = vectorstore
+        else:
+            if not self.vectorstore_path.exists():
+                raise ValueError(f"vectorstore {vectorstore_path!r} does not exist")
+            self.vdb = FaissDB(filename=vectorstore_path)
 
     @staticmethod
     def generate_embeddings(sentences: list[str] | str):
@@ -49,7 +53,9 @@ class StepInputGenerator(BaseModelValidator):
         else:
             return self.vdb.similarity_search_with_score(tsk, k=k)
 
-    def _generate_steps_input(self, split: QuestionSplit, by_vector: bool = False, *args, **kwargs):
+    def _generate_steps_input(
+        self, split: QuestionSplit, by_vector: bool = False, *args, **kwargs
+    ):
         function_docs = list(
             chain(
                 *[
