@@ -1,11 +1,14 @@
-from functools import partial
 import json
+from functools import partial
+
 from pydantic import BaseModel, root_validator
 from helpers.formatter import MessagesFormatter
 
 def json_dumps_or_str(data):
     if isinstance(data, str):
         return data
+    if isinstance(data, BaseModel):
+        return data.model_dump_json()
     try:
         return json.dumps(data)
     except:
@@ -53,7 +56,7 @@ class Messages(BaseModel):
         return item in self.messages
     
     def __repr__(self):
-        return f"{self.__class__.__name__}(messages={len(self.messages)})"
+        return self.model_dump_json()
     
 
 class MessagesList(BaseModel):

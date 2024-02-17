@@ -80,6 +80,8 @@ def try_json_loads(text: str, default_return = []):
         return default_return
 
 def try_json_load(filename: str, default_return = []) -> dict | list:
+    if not Path(filename).exists():
+        return default_return
     return try_json_loads(open(filename, encoding="utf-8").read(), default_return)
 
 def try_json_dumps(data: dict | list, indent=None):

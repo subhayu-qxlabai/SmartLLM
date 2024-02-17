@@ -67,7 +67,7 @@ class DatasetRow(BaseModel):
         return hash(s)
     
     def __repr__(self):
-        return json.dumps(self.model_dump(mode="json"), indent=2)
+        return f"{self.__class__.__name__}(llm={self.llm}, system={self.system}, input={self.input}, output={self.output})"
 
 
 class LLM1DatasetRow(DatasetRow):
@@ -98,15 +98,13 @@ def llm_row_factory(llm_type: LLMType):
         case _:
             return DatasetRow
 
-class LLMDatasetWithTypes(BaseModel):
-    rows: list[DatasetRow|LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(rows={len(self.rows)})"
-
-class LLMDataset(BaseModel):
+class LLMDatasetBase(BaseModel):
     rows: list[DatasetRow] = []
 
+    def to_dir(self, dir: str | Path = DEFAULT_DATASET_DIR):
+        return [row.to_file(dir) for row in self.rows]
+    
     def get_llm(self, llm_type: LLMType):
         return self.__class__(rows=[row for row in self.rows if row.llm == llm_type])
 
@@ -116,18 +114,6 @@ class LLMDataset(BaseModel):
     @classmethod
     def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
         return cls(rows=DatasetRow.from_dir(dir, log_errors))
-
-    def get_llm_type_rows(self, llm_type: LLMType = None):
-        if llm_type:
-            dataset = self.get_llm(llm_type)
-        else:
-            dataset = self
-        return LLMDatasetWithTypes(
-            rows=[
-                llm_row_factory(row.llm).model_validate(row.model_dump(mode="json"))
-                for row in dataset.rows
-            ]
-        )
 
     def to_messages(self):
         m_list = MessagesList()
@@ -179,4 +165,21 @@ class LLMDataset(BaseModel):
     
     def __contains__(self, item):
         return item in self.rows
-    
+
+class LLMDatasetWithTypes(LLMDatasetBase):
+    rows: list[DatasetRow|LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []
+
+class LLMDataset(LLMDatasetBase):
+    rows: list[DatasetRow] = []
+
+    def get_llm_type_rows(self, llm_type: LLMType = None):
+        if llm_type:
+            dataset = self.get_llm(llm_type)
+        else:
+            dataset = self
+        return LLMDatasetWithTypes(
+            rows=[
+                llm_row_factory(row.llm).model_validate(row.model_dump(mode="json"))
+                for row in dataset.rows
+            ]
+        )
