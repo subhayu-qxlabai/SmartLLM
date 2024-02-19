@@ -1,53 +1,84 @@
+import re
 from itertools import chain
 
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Query
 
-from vectorstore.faisser import FaissDB
+from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
 from models.inputs import StepsInput, Function
 from models.outputs import StepsOutput
 from step_runner import StepRunner
+from infer.generic import ask_llm
 from infer.steps_generator import get_steps
 from infer.question_breaker import break_question
 from helpers.middleware import ProcessTimeMiddleware
+from helpers.utils import get_ts_filename, remove_special_chars
 
 app = FastAPI()
 app.add_middleware(ProcessTimeMiddleware)
 
-vdb = FaissDB(filename="vectorstore.pkl")
+vdb = FaissDB(filename="custom_funcs.pkl")
 
+unanswered_regex = re.compile(
+    r"(as\s*of\s*my\s*last|as\s*of\s*my\s*current|last\s*knowledge|knowledge.*\d{4})", 
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
+class QA(BaseModel):
+    question: str
+    answer: str
 
 class OutModel(BaseModel):
+    split: QuestionSplit | None = None
     steps_input: StepsInput | str | None = None
     steps_output: StepsOutput | str | None = None
     context_dict: dict | None = None
+    response: str | None = None
 
-
-@app.post("/process_question")
+@app.post("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
     split: QuestionSplit = break_question(question)
+    print(f"{split=}\n")
 
     if not isinstance(split, QuestionSplit):
         print(split)
         raise HTTPException(status_code=400, detail="Failed to split the question")
 
-    function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split.tasks]))
+    if split.can_i_answer:
+        answer = ask_llm(question)
+        if not unanswered_regex.search(answer):
+            print(f"{split=}")
+            return QA(
+                question=question,
+                answer=answer,
+            )
+    
+    function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split.tasks+[question, "llm"]]))
     functions = set([Function.model_validate(doc.metadata) for doc in function_docs])
+    print(f"{functions=}\n")
     input_schema = StepsInput(query=split.question, steps=split.tasks, functions=functions)
     
     step_output: StepsOutput = get_steps(input_schema)
+    print(f"{step_output=}\n")
 
     if not isinstance(step_output, StepsOutput):
         print(step_output)
         raise HTTPException(status_code=400, detail="Failed to generate steps")
 
-    runner = StepRunner(step_output.steps)
+    runner = StepRunner(question, step_output.steps)
     runner.run_steps()
+    print(f"{runner.context_dict=}\n")
 
-    response = OutModel(steps_input=input_schema, steps_output=step_output, context_dict=runner.context_dict)
-    filepath = f"run_logs/{question.replace(' ', '_').lower()}.json"
-    with open(f"run_logs/{input_schema.query}", "w") as f:
+    response = OutModel(
+        split=split,
+        steps_input=input_schema, 
+        steps_output=step_output, 
+        context_dict=runner.context_dict, 
+        response=list(list(runner.context_dict.values())[-1].get("function", {"": {"output": ""}}).values())[-1]['output'],
+    )
+    filepath = f"run_logs/{remove_special_chars(question.lower())}.json"
+    with open(get_ts_filename(filepath), "w") as f:
         f.write(response.model_dump_json(indent=4))
     return response
 
@@ -55,4 +86,4 @@ async def process_question(question: str = Query(..., title="User Question")):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

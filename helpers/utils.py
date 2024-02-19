@@ -1,13 +1,19 @@
 import re
 import json
+import uuid
 from pathlib import Path
 from itertools import chain
 from datetime import datetime
 from random import choices, randrange, shuffle,random
-import uuid
 
 import tiktoken
 
+
+SPECIAL_CHAR_REGEX = re.compile('[@#,.:;!?\s]')
+
+
+def remove_special_chars(text: str):
+    return SPECIAL_CHAR_REGEX.sub('', text)
 
 def num_tokens_from_messages(messages: list[dict[str, str]], model="gpt-4"):
     encoding = tiktoken.encoding_for_model(model)
