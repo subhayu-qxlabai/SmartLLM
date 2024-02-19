@@ -1,5 +1,4 @@
 from typing import Any
-from transformers import AutoTokenizer
 
 
 class MessagesFormatter(object):
@@ -70,7 +69,7 @@ class MessagesFormatter(object):
             )
         return self
     
-    def tokenize(self, tokenizer: AutoTokenizer, **kwargs):
+    def tokenize(self, tokenizer, **kwargs):
         if not self.formatted_messages:
             self.format()
         self.tokenized_messages = list(map(lambda x: tokenizer(x, **kwargs), self.formatted_messages))
