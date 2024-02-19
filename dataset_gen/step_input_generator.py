@@ -60,7 +60,7 @@ class StepInputGenerator(BaseModelValidator):
             chain(
                 *[
                     self._search_task(tsk, by_vector=by_vector)
-                    for tsk in split.tasks + [split.question]
+                    for tsk in split.tasks + [split.question, "llm", "format"]
                 ]
             )
         )
