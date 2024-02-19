@@ -1,5 +1,6 @@
 import json
 from functools import partial
+from typing import Any
 
 from pydantic import BaseModel, root_validator
 from helpers.formatter import MessagesFormatter
@@ -55,6 +56,38 @@ class Messages(BaseModel):
     def __contains__(self, item):
         return item in self.messages
     
+    def __repr__(self):
+        return self.model_dump_json()
+    
+
+class AlpacaMessages(BaseModel):
+    system: str | None = None
+    input: str | None = None
+    output: str | None = None
+    
+    @root_validator(pre=True)
+    def validate(cls, values: dict[str, Any]):
+        for k, v in values.items():
+            if v is not None:
+                values[k] = json_dumps_or_str(v)
+        return values
+    
+    def to_messages(self) -> Messages:
+        return Messages(
+            messages=[
+                SystemMessage(content=self.system),
+                UserMessage(content=self.input),
+                AssistantMessage(content=self.output),
+            ]
+        )
+    
+    def to_list(self) -> list[dict[str, str]]:
+        return self.to_messages().to_list()
+    
+    @property
+    def formatter(self):
+        return partial(MessagesFormatter, messages=[self.to_messages().to_list()])
+
     def __repr__(self):
         return self.model_dump_json()
     

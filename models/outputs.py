@@ -80,7 +80,7 @@ class Step(BaseModel):
     thought: str
     explore_tools: str
     available_tools: List[str]
-    choose_tool: str
+    choose_tool: str | None = None
     understand_dependencies: Optional[str] = None
     extract: List[ExtractEntry] = []
     function: List[FunctionEntry]

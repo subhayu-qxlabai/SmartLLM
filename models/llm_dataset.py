@@ -10,7 +10,7 @@ from models.inputs import StepsInput
 from models.outputs import StepsOutput
 from models.extractor import ExtractorInput
 from models.generic import Question, QuestionSplit
-from models.messages import MessagesList, Messages, SystemMessage, UserMessage, AssistantMessage
+from models.messages import MessagesList, Messages, SystemMessage, UserMessage, AssistantMessage, AlpacaMessages
 
 UID_FUNCTION = lambda: get_timestamp_uid(make_uuid=True, local_timezone=True)
 DEFAULT_DATASET_DIR = Path("generated/dataset")
@@ -52,7 +52,11 @@ class DatasetRow(BaseModel):
         return [row for row in rows if row is not None]
     
     def to_alpaca(self):
-        return self.model_dump(mode="json", include=["system", "input", "output"], exclude_none=True)
+        return AlpacaMessages(
+            system=self.system,
+            input=self.input,
+            output=self.output,
+        )
     
     def __hash__(self):
         s = ""
