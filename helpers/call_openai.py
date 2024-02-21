@@ -60,105 +60,133 @@ llm = {
 import copy
 from time import sleep
 
-last_gpt4_choosed_key = {
-    "round": 0,
-    "api": llm["v4"]['128k']["150k"][0]
-}
+last_gpt4_choosed_key = {"round": 0, "api": llm["v4"]["128k"]["150k"][0]}
+
 
 def choosed_gpt4_key():
-  # return last_gpt4_choosed_key
-  global last_gpt4_choosed_key
-  current_choosed_key = {}
-  if last_gpt4_choosed_key["round"] == 0:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["150k"][0]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = 1
-  elif last_gpt4_choosed_key["round"] == 1:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["150k"][0]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 2:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["150k"][0]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 3:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["150k"][0]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 4:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 4]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 5:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 4]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 6:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 4]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 7:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 4]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 8:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 4]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 9:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 9]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 10:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 9]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 11:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 9]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  elif last_gpt4_choosed_key["round"] == 12:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 9]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
-  else:
-    last_gpt4_choosed_key["api"] = llm["v4"]['128k']["80k"][last_gpt4_choosed_key["round"] - 9]
-    current_choosed_key = copy.copy(last_gpt4_choosed_key)
-    last_gpt4_choosed_key["round"] = 0
-  return current_choosed_key
+    # return last_gpt4_choosed_key
+    global last_gpt4_choosed_key
+    current_choosed_key = {}
+    if last_gpt4_choosed_key["round"] == 0:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["150k"][0]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = 1
+    elif last_gpt4_choosed_key["round"] == 1:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["150k"][0]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 2:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["150k"][0]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 3:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["150k"][0]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 4:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 4
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 5:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 4
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 6:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 4
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 7:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 4
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 8:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 4
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 9:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 9
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 10:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 9
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 11:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 9
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    elif last_gpt4_choosed_key["round"] == 12:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 9
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = last_gpt4_choosed_key["round"] + 1
+    else:
+        last_gpt4_choosed_key["api"] = llm["v4"]["128k"]["80k"][
+            last_gpt4_choosed_key["round"] - 9
+        ]
+        current_choosed_key = copy.copy(last_gpt4_choosed_key)
+        last_gpt4_choosed_key["round"] = 0
+    return current_choosed_key
+
 
 # requires openai==0.28.1
 import openai
 from helpers.utils import get_openai_rate_limit_seconds
 
 
-def call_openai_api(messages: list[dict[str, str]], temperature: float = 0.7, n: int = 1):
+def call_openai_api(
+    messages: list[dict[str, str]], temperature: float = 0.7, n: int = 1
+):
     llm_api = choosed_gpt4_key()["api"]
     # print(f"API: {llm_api}")
 
-    openai_engine = llm_api['model_id']
+    openai_engine = llm_api["model_id"]
     openai_api_version = "2023-12-01-preview"
     openai.api_type = "azure"
     openai.api_key = llm_api["key1"]
-    openai.api_base = llm_api['endpoint']
+    openai.api_base = llm_api["endpoint"]
     openai.api_version = openai_api_version
-    
+
     try:
-      response = openai.ChatCompletion.create(
-          engine=openai_engine,
-          messages=messages,
-          temperature=temperature,
-          n=n
-      )
-      return response
+        response = openai.ChatCompletion.create(
+            engine=openai_engine, messages=messages, temperature=temperature, n=n
+        )
+        return response
     except Exception as e:
-      rate_limit_seconds = get_openai_rate_limit_seconds(str(e))
-      seconds_to_sleep = rate_limit_seconds + 60
-      print(f"Got error: {e!r}")
-      print(f"Sleeping for {seconds_to_sleep} seconds...")
-      sleep(seconds_to_sleep)
-      return call_openai_api(messages=messages, temperature=temperature, n=n)
+        if "response was filtered" in str(e):
+            print("Prompt was filtered. Not retrying.")
+            return
+        rate_limit_seconds = get_openai_rate_limit_seconds(str(e))
+        seconds_to_sleep = rate_limit_seconds + 60
+        print(f"Got error: {e!r}")
+        print(f"Sleeping for {seconds_to_sleep} seconds...")
+        sleep(seconds_to_sleep)
+        return call_openai_api(messages=messages, temperature=temperature, n=n)
 
 
 if __name__ == "__main__":
-    print(call_openai_api(messages=[{"role": "user", "content": "Only give the answer. 1+2="}], temperature=0).choices[0].message.content)
+    print(
+        call_openai_api(
+            messages=[{"role": "user", "content": "Only give the answer. 1+2="}],
+            temperature=0,
+        )
+        .choices[0]
+        .message.content
+    )
