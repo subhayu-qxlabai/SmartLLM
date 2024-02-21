@@ -3,17 +3,37 @@ import uuid
 import random
 from enum import Enum
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 
 from helpers.utils import get_timestamp_uid
 from models.inputs import StepsInput
 from models.outputs import StepsOutput
 from models.extractor import ExtractorInput
 from models.generic import Question, QuestionSplit
-from models.messages import MessagesList, Messages, SystemMessage, UserMessage, AssistantMessage, AlpacaMessages
+from models.messages import (
+    MessagesList, 
+    Messages, 
+    SystemMessage, 
+    UserMessage, 
+    AssistantMessage, 
+    AlpacaMessages
+)
+
 
 UID_FUNCTION = lambda: get_timestamp_uid(make_uuid=True, local_timezone=True)
 DEFAULT_DATASET_DIR = Path("generated/dataset")
+
+
+def try_load_model(model: BaseModel, val):
+    try:
+        if isinstance(val, model):
+            return val
+        elif isinstance(val, str):
+            return model.model_validate_json(val)
+        elif isinstance(val, dict):
+            return model.model_validate(val)
+    except Exception as e:
+        return val
 
 class LLMType(str, Enum):
     LLM1 = "llm1"
@@ -78,17 +98,40 @@ class LLM1DatasetRow(DatasetRow):
     llm: LLMType = LLMType.LLM1
     input: Question
     output: QuestionSplit | None
+    
+    @root_validator(pre=True)
+    def validate(cls, values: dict|BaseModel):
+        if isinstance(values, BaseModel):
+            values = values.model_dump()
+        values["input"] = try_load_model(Question, values["input"])
+        values["output"] = try_load_model(QuestionSplit, values["output"])
+        return values
 
 
 class LLM2DatasetRow(DatasetRow):
     llm: LLMType = LLMType.LLM2
     input: StepsInput | None
     output: StepsOutput | None
+    
+    @root_validator(pre=True)
+    def validate(cls, values: dict|BaseModel):
+        if isinstance(values, BaseModel):
+            values = values.model_dump()
+        values["input"] = try_load_model(StepsInput, values["input"])
+        values["output"] = try_load_model(StepsOutput, values["output"])
+        return values
 
 
 class LLM3DatasetRow(DatasetRow):
     llm: LLMType = LLMType.LLM3
     input: ExtractorInput | None
+    
+    @root_validator(pre=True)
+    def validate(cls, values: dict|BaseModel):
+        if isinstance(values, BaseModel):
+            values = values.model_dump()
+        values["input"] = try_load_model(ExtractorInput, values["input"])
+        return values
 
 
 def llm_row_factory(llm_type: LLMType):
@@ -169,6 +212,9 @@ class LLMDatasetBase(BaseModel):
     
     def __contains__(self, item):
         return item in self.rows
+    
+    def __add__(self, other: "LLMDatasetBase"):
+        return self.__class__(rows=self.rows + other.rows)
 
 class LLMDatasetWithTypes(LLMDatasetBase):
     rows: list[DatasetRow|LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []

@@ -1,4 +1,5 @@
 from pathlib import Path
+from random import choice
 from itertools import chain
 
 from sentence_transformers import SentenceTransformer
@@ -56,14 +57,22 @@ class StepInputGenerator(BaseModelValidator):
     def _generate_steps_input(
         self, split: QuestionSplit, by_vector: bool = False, *args, **kwargs
     ):
+        format_func_names = ["llm", "format"]
+        n_tasks = len(split.tasks)
+        if 0 <= n_tasks < 2:
+            k = 3
+        elif 2 <= n_tasks < 4:
+            k = 2
+        else:
+            k = 1
         function_docs = list(
             chain(
                 *[
-                    self._search_task(tsk, by_vector=by_vector)
-                    for tsk in split.tasks + [split.question, "llm", "format"]
+                    self._search_task(tsk, k=k, by_vector=by_vector)
+                    for tsk in split.tasks + [split.question]
                 ]
             )
-        )
+        ) + self._search_task(choice(format_func_names), k=1, by_vector=by_vector)
         unique_functions = {
             doc.page_content: Function(**doc.metadata) for doc, score in function_docs
         }
