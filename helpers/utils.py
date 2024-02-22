@@ -1,9 +1,12 @@
 import re
 import json
 import uuid
+import traceback
 from pathlib import Path
 from itertools import chain
 from datetime import datetime
+from concurrent import futures
+from typing import Callable, Iterable
 from random import choices, randrange, shuffle,random
 
 import tiktoken
@@ -11,6 +14,64 @@ import tiktoken
 
 SPECIAL_CHAR_REGEX = re.compile('[@#,.:;!?\s]')
 
+
+def get_trace(e: Exception, n: int = 5):
+    """Get the last n lines of the traceback for an exception"""
+    return "".join(traceback.format_exception(e)[-n:])
+
+def run_parallel_exec(exec_func: Callable, iterable: Iterable, *func_args, **kwargs):
+    """
+    Runs the `exec_func` function in parallel for each element in the `iterable` using a thread pool executor.
+    
+    Parameters:
+        exec_func (Callable): The function to be executed for each element in the `iterable`.
+        iterable (Iterable): The collection of elements for which the `exec_func` function will be executed.
+        *func_args: Additional positional arguments to be passed to the `exec_func` function.
+        **kwargs: Additional keyword arguments to customize the behavior of the function.
+            - max_workers (int): The maximum number of worker threads in the thread pool executor. Default is 100.
+            - quiet (bool): If True, suppresses the traceback printing for exceptions. Default is False.
+    
+    Returns:
+        list[tuple]: A list of tuples where each tuple contains the element from the `iterable` and the result of executing the `exec_func` function on that element.
+
+    Example:
+        >>> from app.utils.helpers import run_parallel_exec
+        >>> run_parallel_exec(lambda x: str(x), [1, 2, 3])
+        [(1, '1'), (2, '2'), (3, '3')]
+    """
+    with futures.ThreadPoolExecutor(
+        max_workers=kwargs.pop("max_workers", 100)
+    ) as executor:
+        # Start the load operations and mark each future with each element
+        future_element_map = {
+            executor.submit(exec_func, element, *func_args): element
+            for element in iterable
+        }
+        result: list[tuple] = []
+        for future in futures.as_completed(future_element_map):
+            element = future_element_map[future]
+            try:
+                data = future.result()
+            except Exception as exc:
+                log_trace = exc if kwargs.pop("quiet", False) else get_trace(exc, 3)
+                print(f"Got error while running parallel_exec: {element}: \n{log_trace}")
+                result.append((element, exc))
+            else:
+                result.append((element, data))
+        return result
+
+def run_parallel_exec_but_return_in_order(exec_func: Callable, iterable: Iterable, *func_args, **kwargs):
+    """
+    Runs the `exec_func` function in parallel for each element in the `iterable` using a thread pool executor.
+    Returns the result in the same order as the `iterable`.
+    """
+    # note this is usable only when iterable has types that are hashable
+    result = run_parallel_exec(exec_func, iterable:=list(iterable), *func_args, **kwargs)
+
+    # sort the result in the same order as the iterable
+    result.sort(key=lambda x: iterable.index(x[0]))
+
+    return [x[-1] for x in result]
 
 def remove_special_chars(text: str):
     return SPECIAL_CHAR_REGEX.sub('', text)
@@ -142,3 +203,17 @@ def get_timestamp_uid(make_uuid=True, local_timezone=True):
         rndm = str(randrange(10 ** 11, 10 ** 12))
         uid = uuid.UUID(f'{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{rndm}')
     return uid
+
+def convert_to_dict(val: str | dict | None) -> dict | None:
+    if val is None:
+        return None
+    if isinstance(val, str):
+        return json.loads(val)
+    return val
+
+def convert_to_str(val: str | dict | None) -> str | None:
+    if val is None:
+        return None
+    if isinstance(val, dict):
+        return json.dumps(val)
+    return val

@@ -1,6 +1,6 @@
 from pathlib import Path
-from typing import Callable
 from multiprocessing import Pool
+from typing import Callable, Literal
 from itertools import chain, zip_longest
 
 from dataset_gen.topic_generator import TopicGenerator
@@ -8,19 +8,21 @@ from dataset_gen.question_generator import QuestionGenerator
 from dataset_gen.split_generator import QuestionSplitGenerator
 from dataset_gen.step_input_generator import StepInputGenerator
 from dataset_gen.step_output_generator import StepOutputGenerator
+from helpers.utils import run_parallel_exec_but_return_in_order
 from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
 from models.llm_dataset import (
     LLMType,
     LLMDataset,
     DatasetRow,
+    DEFAULT_DATASET_DIR,
 )
 
 
 class DatasetGenerator:
     def __init__(
         self,
-        dump_dir: str | Path = "generated/dataset",
+        dump_dir: str | Path = DEFAULT_DATASET_DIR,
         generated_topics_file: str | Path = "topics.txt",
         verbose=True,
         dump_rows=True,
@@ -29,6 +31,19 @@ class DatasetGenerator:
         local_embeddings=False,
         vectorstore: FaissDB | None = None,
     ):
+        """
+        Initialize the class with the given parameters.
+
+        Parameters:
+            dump_dir (str | Path): The directory to dump the generated dataset.
+            generated_topics_file (str | Path): The file to store the generated topics.
+            verbose (bool): Whether to print verbose messages.
+            dump_rows (bool): Whether to dump the rows of the dataset.
+            dump_internal (bool): Whether to dump the internal representation of the dataset.
+            validate (bool): Whether to validate the dataset.
+            local_embeddings (bool): Whether to use local embeddings.
+            vectorstore (FaissDB | None): The vector store database, or None if not provided.
+        """
         self.dump_dir = Path(dump_dir)
         self.generated_topics_path = self.dump_dir / generated_topics_file
         self.verbose = verbose
@@ -159,29 +174,43 @@ class DatasetGenerator:
             self.dataset.rows.extend(rows)
         return rows
 
-    def generate_parallel(self, topics: list[str], multiplier=1, n_processes=4):
+    def generate_parallel(
+        self,
+        topics: list[str],
+        multiplier=1,
+        workers=4,
+        parallelism: Literal["thread", "process"] = "thread",
+    ):
         """
         Generate results in parallel using multiprocessing.Pool.
 
         Args:
             topics (list[str]): List of topics to generate results for.
             multiplier (int): Multiplier to apply to the generated results.
-            n_processes (int): Number of parallel processes to use.
+            workers (int): Number of parallel workers to use.
+            parallelism (Literal["thread", "process"], optional): Use multiprocessing or multithreading.
 
         Returns:
             list[DatasetRow]: A list of generated results.
         """
-        with Pool(n_processes) as p:
-            generated = p.starmap(
-                self.generate, [(topic, multiplier) for topic in topics]
+        if parallelism == "thread":
+            generated: list[list[DatasetRow]] = run_parallel_exec_but_return_in_order(
+                self.generate, topics, multiplier
             )
+        elif parallelism == "process":
+            with Pool(workers) as p:
+                generated = p.starmap(
+                    self.generate, [(topic, multiplier) for topic in topics]
+                )
+        else:
+            raise ValueError("parallelism must be 'thread' or 'process'")
         return list(chain(*generated))
 
-    def generate_auto(self, n=5, multiplier=1, n_processes=4):
+    def generate_auto(self, n=5, multiplier=1, workers=4):
         topics = TopicGenerator().generate(n, dump=True)
         if self.verbose:
             print(f"Generating for topics: {topics}")
-        generated = self.generate_parallel(topics, multiplier, n_processes)
+        generated = self.generate_parallel(topics, multiplier, workers)
         return generated
 
     def dump(self):
