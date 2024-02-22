@@ -73,6 +73,7 @@ def generate(
         validate=validate,
         local_embeddings=local_embeddings,
     )
+    topics: list[str] = []
     if topics_file and topics_file.exists():
         topics: list[str] = try_json_load(topics_file, [])
     if topics:
