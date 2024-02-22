@@ -108,6 +108,8 @@ class JSONArrayGenerator(BaseModelValidator):
             print(f"{self.__class__.__name__} num tokens: {num_tokens}")
 
         generated = self.call_openai_func(messages=messages, temperature=0.7, n=n)
+        if generated is None:
+            return []
         return [x.message.content for x in generated.choices]
 
     def _generate_responses(

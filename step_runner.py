@@ -87,6 +87,8 @@ class StepRunner:
             ]
 
         response = call_openai_api(messages)
+        if response is None:
+            return
         response = response.choices[0].message.content
         try:
             return json.loads(response)
