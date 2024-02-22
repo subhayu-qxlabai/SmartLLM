@@ -18,12 +18,13 @@ from models.llm_dataset import (
     DEFAULT_DATASET_DIR,
 )
 
+DEFAULT_TOPICS_FILE = "topics.txt"
 
 class DatasetGenerator:
     def __init__(
         self,
         dump_dir: str | Path = DEFAULT_DATASET_DIR,
-        generated_topics_file: str | Path = "topics.txt",
+        generated_topics_file: str | Path = DEFAULT_TOPICS_FILE,
         verbose=True,
         dump_rows=True,
         dump_internal=False,
@@ -36,7 +37,7 @@ class DatasetGenerator:
 
         Parameters:
             dump_dir (str | Path): The directory to dump the generated dataset.
-            generated_topics_file (str | Path): The file to store the generated topics.
+            generated_topics_file (str | Path): The file to store the generated topics. Used for hash.
             verbose (bool): Whether to print verbose messages.
             dump_rows (bool): Whether to dump the rows of the dataset.
             dump_internal (bool): Whether to dump the internal representation of the dataset.
@@ -85,6 +86,8 @@ class DatasetGenerator:
             validate=self.validate,
             strict=True,
         )
+        if not splits:
+            return []
         split_models: list[QuestionSplit | None] = [
             QuestionSplitGenerator()._to_model(split, QuestionSplit) for split in splits
         ]
@@ -135,7 +138,7 @@ class DatasetGenerator:
         if not self.generated_topics_path.exists():
             return []
         with open(self.generated_topics_path, "r") as f:
-            return f.readlines()
+            return set(f.read().splitlines())
 
     def _add_generated_topics(self, topics: list[str]):
         with open(self.generated_topics_path, "a") as f:
@@ -145,7 +148,8 @@ class DatasetGenerator:
         self._add_generated_topics([topic])
 
     def _is_new_topic(self, topic: str):
-        return topic not in self._load_generated_topics()
+        existing_topics = self._load_generated_topics()
+        return topic not in existing_topics
 
     def generate(self, topic: str, multiplier=1) -> list[DatasetRow]:
         """
@@ -160,7 +164,7 @@ class DatasetGenerator:
         """
         if not self._is_new_topic(topic):
             if self.verbose:
-                print(f"Topic {topic!r} already generated")
+                print(f"Topic {topic!r} already generated or in progress or failed.")
             return []
         print(f"Generating for topic: {topic}")
         self._add_generated_topic(topic)
@@ -195,7 +199,7 @@ class DatasetGenerator:
         """
         if parallelism == "thread":
             generated: list[list[DatasetRow]] = run_parallel_exec_but_return_in_order(
-                self.generate, topics, multiplier
+                self.generate, topics, multiplier, max_workers=workers, quiet=not self.verbose,
             )
         elif parallelism == "process":
             with Pool(workers) as p:

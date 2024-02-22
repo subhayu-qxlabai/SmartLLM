@@ -5,11 +5,12 @@ from typing import Callable
 from helpers.call_openai import call_openai_api
 from dataset_gen.json_array_generator import JSONArrayGenerator
 
+DEFAULT_DUMP_DIR = Path("generated/question")
 
 class QuestionGenerator(JSONArrayGenerator):
     def __init__(
         self,
-        dump_dir: str | Path = "generated/question",
+        dump_dir: str | Path = DEFAULT_DUMP_DIR,
         file_prefix: str = "q",
         system_prompt: str = None,
         example_messages: list[dict[str, str]] = [],

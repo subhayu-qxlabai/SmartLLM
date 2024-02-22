@@ -1,17 +1,17 @@
-from itertools import chain
 import json
 from pathlib import Path
 from typing import Callable
 
-from dataset_gen.json_array_generator import JSONArrayGenerator
 from helpers.call_openai import call_openai_api
-from helpers.utils import clean_json_str, try_json_loads
+from dataset_gen.json_array_generator import JSONArrayGenerator
+from helpers.utils import clean_json_str, try_json_loads, try_json_load
 
+DEFAULT_DUMP_DIR = Path("generated/json")
 
 class JSONGenerator(JSONArrayGenerator):
     def __init__(
         self,
-        dump_dir: str | Path = "generated/json",
+        dump_dir: str | Path = DEFAULT_DUMP_DIR,
         file_prefix: str = "x",
         system_prompt: str = None,
         example_messages: list[dict[str, str]] = [],
@@ -62,6 +62,15 @@ class JSONGenerator(JSONArrayGenerator):
         with open(dump_file, "w") as f:
             json.dump(generated, f, indent=2)
         return dump_file
+
+    def load(self):
+        """
+        Loads the list of generated items from a JSON files specified by the `dump_dir` parameter.
+        """
+        items: list[dict] = [
+            try_json_load(x, {}) for x in self.dump_dir.rglob("*.json")
+        ]
+        return items
 
     def _generate_responses(
         self, last_user_message: str, n: int = 1, dump: bool = False

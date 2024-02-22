@@ -3,15 +3,15 @@ from pathlib import Path
 from typing import Callable
 
 from models.generic import QuestionSplit
-from helpers.utils import try_json_loads
 from helpers.call_openai import call_openai_api
 from dataset_gen.json_array_generator import JSONArrayGenerator
 
+DEFAULT_DUMP_DIR = Path("generated/split")
 
 class QuestionSplitGenerator(JSONArrayGenerator):
     def __init__(
         self,
-        dump_dir: str | Path = "generated/split",
+        dump_dir: str | Path = DEFAULT_DUMP_DIR,
         file_prefix: str = "s",
         system_prompt: str = None,
         example_messages: list[dict[str, str]] = [],

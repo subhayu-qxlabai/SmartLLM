@@ -171,7 +171,7 @@ def call_openai_api(
         return response
     except Exception as e:
         if "response was filtered" in str(e):
-            print("Prompt was filtered. Not retrying.")
+            print("Prompt was filtered.")
             return
         rate_limit_seconds = get_openai_rate_limit_seconds(str(e))
         seconds_to_sleep = rate_limit_seconds + 60

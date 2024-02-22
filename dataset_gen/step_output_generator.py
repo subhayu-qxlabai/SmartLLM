@@ -7,11 +7,12 @@ from helpers.utils import try_json_dumps
 from helpers.call_openai import call_openai_api
 from dataset_gen.json_generator import JSONGenerator
 
+DEFAULT_DUMP_DIR = Path("generated/step_output")
 
 class StepOutputGenerator(JSONGenerator):
     def __init__(
         self,
-        dump_dir: str | Path = "generated/step_output",
+        dump_dir: str | Path = DEFAULT_DUMP_DIR,
         file_prefix: str = "s",
         system_prompt: str = None,
         example_messages: list[dict[str, str]] = [],

@@ -9,14 +9,16 @@ from models.generic import QuestionSplit
 from models.inputs import StepsInput, Function
 from dataset_gen.model_validator import BaseModelValidator
 
+DEFAULT_DUMP_DIR = Path("generated/step_input")
+DEFAULT_VECTORESTORE_PATH = Path("functions.pkl")
 
 class StepInputGenerator(BaseModelValidator):
     def __init__(
         self,
-        dump_dir: str | Path = "generated/step_input",
+        dump_dir: str | Path = DEFAULT_DUMP_DIR,
         file_prefix: str = "s",
         verbose: bool = True,
-        vectorstore_path: str | Path = "functions.pkl",
+        vectorstore_path: str | Path = DEFAULT_VECTORESTORE_PATH,
         vectorstore: FaissDB | None = None,
         *args,
         **kwargs,

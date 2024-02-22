@@ -13,11 +13,12 @@ from helpers.utils import (
     join_lists_from_dir,
 )
 
+DEFAULT_DUMP_DIR = Path("generated/json_array")
 
 class JSONArrayGenerator(BaseModelValidator):
     def __init__(
         self,
-        dump_dir: str | Path = "generated/json_array",
+        dump_dir: str | Path = DEFAULT_DUMP_DIR,
         file_prefix: str = "x",
         system_prompt: str = None,
         example_messages: list[dict[str, str]] = [],

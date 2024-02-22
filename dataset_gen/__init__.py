@@ -2,9 +2,9 @@ from dataset_gen.model_validator import BaseModelValidator
 from dataset_gen.json_generator import JSONGenerator
 from dataset_gen.json_array_generator import JSONArrayGenerator
 
-from dataset_gen.dataset_generator import DatasetGenerator
+from dataset_gen.dataset_generator import DatasetGenerator, DEFAULT_TOPICS_FILE
 from dataset_gen.question_generator import QuestionGenerator
 from dataset_gen.split_generator import QuestionSplitGenerator
-from dataset_gen.step_input_generator import StepInputGenerator
+from dataset_gen.step_input_generator import StepInputGenerator, DEFAULT_VECTORESTORE_PATH
 from dataset_gen.step_output_generator import StepOutputGenerator
 from dataset_gen.topic_generator import TopicGenerator

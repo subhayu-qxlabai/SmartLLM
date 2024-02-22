@@ -155,9 +155,6 @@ class LLMDatasetBase(BaseModel):
     def get_llm(self, llm_type: LLMType):
         return self.__class__(rows=[row for row in self.rows if row.llm == llm_type])
 
-    def to_dir(self, dir: str | Path = DEFAULT_DATASET_DIR):
-        return [row.to_file(dir) for row in self.rows]
-
     @classmethod
     def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
         return cls(rows=DatasetRow.from_dir(dir, log_errors))
@@ -180,6 +177,7 @@ class LLMDatasetBase(BaseModel):
         return [row.to_alpaca() for row in self.rows]
     
     def to_file(self, file: str | Path = "generated.json", dir: str | Path = DEFAULT_DATASET_DIR):
+        print(f"Dumped {len(self.rows)} rows to {(Path(dir) / file).absolute().as_posix()!r}")
         with open(Path(dir) / file, "w") as f:
             f.write(self.model_dump_json())
 
