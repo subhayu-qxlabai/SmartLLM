@@ -20,11 +20,13 @@ class ParallelismType(str, Enum):
 
 @app.command()
 def generate(
-    topics_file: str = typer.Argument(
+    generate_for: int = typer.Argument(10, min=1, help="Number of topics to generate"),
+    topics_file: str = typer.Option(
         "yahoo_questions_1.4M.json",
+        "--topics-file",
+        "-t",
         help="Path to the topics file. Must be a JSON array of strings.",
     ),
-    generate_for: int = typer.Argument(10, min=1, help="Number of topics to generate"),
     multiplier: int = typer.Option(
         1,
         "--multiplier",
