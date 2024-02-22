@@ -90,7 +90,7 @@ def generate(
     if topics:
         shuffle(topics)
         topics = topics[:generate_for]
-        print(f"Generating for {generate_for} topics: {topics}")
+        print(f"Generating for {generate_for} topics")
         rows = dg.generate_parallel(topics, multiplier, workers, parallelism)
     else:
         generate_for = min(generate_for, 10)
