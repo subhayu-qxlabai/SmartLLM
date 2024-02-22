@@ -6,8 +6,8 @@ import typer
 
 from helpers.utils import try_json_load
 from helpers.vectorstore.faisser import FaissDB
+from dataset_gen import DatasetGenerator, DEFAULT_TOPICS_FILE
 from models.llm_dataset import LLMDataset, DEFAULT_DATASET_DIR, LLMType
-from dataset_gen import DatasetGenerator, DEFAULT_TOPICS_FILE, DEFAULT_VECTORESTORE_PATH
 
 
 app = typer.Typer()
@@ -39,7 +39,7 @@ def generate(
         4, "--workers", "-w", min=1, help="Number of workers to use"
     ),
     parallelism: ParallelismType = typer.Option(
-        ParallelismType.thread.value,
+        ParallelismType.process.value,
         "--parallelism",
         "-p",
         help="Use multiprocessing or multithreading",
@@ -61,20 +61,9 @@ def generate(
         "-gt",
         help="File to store the generated topics for hash",
     ),
-    vectorstore_path: str = typer.Option(
-        DEFAULT_VECTORESTORE_PATH,
-        "--vectorstore-path",
-        "-vp",
-        help="Path to the vector store database of functions",
-    ),
 ):
     assert generate_for > 0, "generate_for must be greater than 0"
     topics_file: Path | None = Path(topics_file) if topics_file is not None else None
-    vdb = (
-        FaissDB(filename=vectorstore_path)
-        if parallelism == ParallelismType.thread
-        else None
-    )
     dg = DatasetGenerator(
         dump_dir=dump_dir,
         generated_topics_file=generated_topics_file,
@@ -83,7 +72,6 @@ def generate(
         dump_internal=dump_internal,
         validate=validate,
         local_embeddings=local_embeddings,
-        vectorstore=vdb,
     )
     if topics_file and topics_file.exists():
         topics: list[str] = try_json_load(topics_file, [])
