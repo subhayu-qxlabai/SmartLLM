@@ -129,9 +129,13 @@ def remove_comments(text: str) -> str:
 def clean_json_str(text: str) -> str:
     return remove_comments(remove_backticks(text))
 
-def get_ts_filename(filepath: str):
+def get_ts_filename(filepath: str, add_random: bool = True):
     filepath: Path = Path(filepath)
-    filepath = filepath.parent / f"{filepath.stem}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(random())[2:]}{filepath.suffix}"
+    extra_suffix = f"_{str(random())[2:]}" if add_random else ""
+    filepath = (
+        filepath.parent
+        / f"{filepath.name.rsplit('.')[0]}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}{extra_suffix}.{filepath.name.rsplit('.')[-1]}"
+    )
     return filepath
 
 def try_json_loads(text: str, default_return = []):

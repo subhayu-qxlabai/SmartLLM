@@ -72,11 +72,22 @@ class DatasetRow(BaseModel):
         return [row for row in rows if row is not None]
     
     def to_alpaca(self):
+        if self.system is None and self.input is None and self.output is None:
+            return None
         return AlpacaMessages(
             system=self.system,
             input=self.input,
             output=self.output,
         )
+    
+    @classmethod
+    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False):
+        try:
+            return cls.model_validate(val)
+        except Exception as e:
+            if verbose:
+                print(f"Failed to load model: {e}")
+            return None if none_on_fail else val
     
     def __hash__(self):
         s = ""
@@ -174,7 +185,8 @@ class LLMDatasetBase(BaseModel):
         return m_list
     
     def to_alpaca(self):
-        return [row.to_alpaca() for row in self.rows]
+        alpaca_rows = [row.to_alpaca() for row in self.rows]
+        return [row for row in alpaca_rows if row is not None]
     
     def to_file(self, file: str | Path = "generated.json", dir: str | Path = DEFAULT_DATASET_DIR):
         print(f"Dumped {len(self.rows)} rows to {(Path(dir) / file).absolute().as_posix()!r}")
@@ -203,7 +215,7 @@ class LLMDatasetBase(BaseModel):
         return len(self.rows)
     
     def __getitem__(self, index):
-        return self.rows[index]
+        return self.__class__(rows=self.rows[index])
     
     def __iter__(self):
         return iter(self.rows)
@@ -220,14 +232,16 @@ class LLMDatasetWithTypes(LLMDatasetBase):
 class LLMDataset(LLMDatasetBase):
     rows: list[DatasetRow] = []
 
-    def get_llm_type_rows(self, llm_type: LLMType = None):
+    def get_llm_type_rows(self, llm_type: LLMType = None, verbose: bool = False):
         if llm_type:
             dataset = self.get_llm(llm_type)
         else:
             dataset = self
-        return LLMDatasetWithTypes(
-            rows=[
-                llm_row_factory(row.llm).model_validate(row.model_dump(mode="json"))
-                for row in dataset.rows
-            ]
-        )
+        rows = [
+            llm_row_factory(row.llm).try_model_validate(
+                row.model_dump(mode="json"), none_on_fail=True, verbose=verbose
+            )
+            for row in dataset.rows
+        ]
+        return LLMDatasetWithTypes(rows=[row for row in rows if row is not None])
+        

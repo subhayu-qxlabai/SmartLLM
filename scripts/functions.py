@@ -37,7 +37,7 @@ def vdb_from_functions(
     return FaissDB(filename=dump_path, documents=docs)
 
 
-@app.command()
+@app.command(help="Create a vector database from a json file of functions")
 def vdb_from_json(
     json_path: str = typer.Argument("functions.json", help="Path to functions json"),
     dump_path: str = typer.Option(None, help="Path to dump file. Defaults to <json_path>.pkl"),
@@ -51,9 +51,3 @@ def vdb_from_json(
     if dump_path is None:
         dump_path = json_path.with_suffix(".pkl")
     return vdb_from_functions(functions, dump_path=dump_path)
-
-
-if __name__ == "__main__":
-    json_path = input("Enter path to functions json: ")
-    dump_path = input("Enter path to dump file: ")
-    vdb_from_json(json_path, dump_path)

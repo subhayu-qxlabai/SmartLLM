@@ -17,7 +17,7 @@ class ModelMessages:
         messages = messages_dict.get(key, [])
         return {key: self.model_format_single(messages)}
 
-    def model_format(self, messages_list: list[list[dict[str, str]]]):
+    def model_format(self, messages_list: list[list[dict[str, str]]]) -> list[str]:
         try:
             self.model_format_single(messages_list[0])
         except Exception as e1:
