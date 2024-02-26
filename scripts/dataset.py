@@ -7,6 +7,7 @@ from datasets import Dataset
 
 from helpers.utils import try_json_load, get_ts_filename
 from dataset_gen import DatasetGenerator, DEFAULT_TOPICS_FILE
+from models.messages import ConversationFormat, messages_list_factory
 from models.llm_dataset import (
     LLMDataset,
     DEFAULT_DATASET_DIR,
@@ -21,11 +22,6 @@ app = typer.Typer()
 class ParallelismType(str, Enum):
     thread = "thread"
     process = "process"
-
-
-class ConversationFormat(str, Enum):
-    alpaca = "alpaca"
-    openai = "openai"
 
 
 @app.command(help="Generates dataset")
@@ -91,23 +87,13 @@ def generate(
     if topics:
         shuffle(topics)
         topics = topics[:generate_for]
-        print(f"Generating for {generate_for} topics")
+        typer.echo(f"Generating for {generate_for} topics")
         rows = dg.generate_parallel(topics, multiplier, workers, parallelism)
     else:
         generate_for = min(generate_for, 10)
         typer.echo(f"No topics found! Auto-generating for {generate_for} topics...")
         rows = dg.generate_auto(generate_for, multiplier, workers)
     typer.echo(f"Generated {len(rows)} rows!")
-
-
-def _merge_existing_dataset(current_dataset: LLMDataset, existing_path: Path):
-    if existing_path.exists() and existing_path.is_file():
-        existing_dataset = LLMDataset.from_file(
-            file=existing_path.name, dir=existing_path.parent, log_errors=False
-        )
-        if existing_dataset:
-            current_dataset = existing_dataset + current_dataset
-    return current_dataset
 
 
 def get_dataset_map(
@@ -170,10 +156,21 @@ def to_file(
         get_ts_filename(".json", add_random=False).name if add_timestamp else ".json"
     )
     dataset_map = get_dataset_map(source_dir, quiet, split_by_llm, validate_schema)
+    file_prefix = f"{file_prefix}_" if file_prefix else ""
     for _type, dataset in dataset_map.items():
-        filename = f"{file_prefix}_{_type}{suffix}"
+        filename = f"{file_prefix}{_type}{suffix}"
+        existing_path = dump_dir / filename
         if merge_existing:
-            dataset = _merge_existing_dataset(dataset, dump_dir / filename)
+            if existing_path.exists() and existing_path.is_file():
+                existing_dataset = LLMDataset.from_file(
+                    file=existing_path.name, dir=existing_path.parent, log_errors=False
+                )
+                if existing_dataset:
+                    typer.echo(f"Merging {len(existing_dataset)} existing rows with {len(dataset)} new ones...")
+                    dataset = existing_dataset.get_llm_type_rows(LLMType(_type)) + dataset
+        typer.echo(
+            f"Dumping {_type} dataset with {len(dataset)} rows to {filename}"
+        ) if not quiet else None
         dataset.to_file(filename, dir=dump_dir)
 
 
@@ -201,7 +198,7 @@ def to_conversations(
         True, help="Merge the new dataset with the existing one if it exists"
     ),
     file_prefix: str = typer.Option(
-        None, "--file-prefix", "-p", help="Prefix of the output file(s)"
+        "conv", "--file-prefix", "-p", help="Prefix of the output file(s)"
     ),
     add_timestamp: bool = typer.Option(
         False, help="Add timestamp suffix to the file name"
@@ -214,17 +211,24 @@ def to_conversations(
     )
     dataset_map = get_dataset_map(source, quiet, split_by_llm, validate_schema)
     for _type, dataset in dataset_map.items():
-        if conv_format == ConversationFormat.alpaca:
-            conv_dataset = Dataset.from_list(
-                [x.model_dump(mode="json") for x in dataset.to_alpaca()]
-            )
-        elif conv_format == ConversationFormat.openai:
-            conv_dataset = Dataset.from_list(
-                dataset.to_messages().model_dump(mode="json")["messages_list"]
-            )
-        else:
-            raise ValueError(f"Invalid conversation format: {conv_format}")
+        conv_list = dataset.to_messages(conv_format)
         filename = f"{_type}_{conv_format.value}{suffix}"
-        if file_prefix is not None:
+        if file_prefix:
             filename = f"{file_prefix}_{filename}"
+        if merge_existing and (dump_dir / filename).exists():
+            existing_conv_list = messages_list_factory(
+                conv_format
+            ).from_jsonl(dump_dir / filename)
+            typer.echo(
+                f"Merging {len(existing_conv_list)} existing conversations with {len(conv_list)} new ones for {_type}..."
+            ) if not quiet else None
+            conv_list = conv_list + existing_conv_list
+        if len(conv_list) == 0:
+            continue
+        conv_dataset = Dataset.from_list(
+            conv_list.model_dump(mode="json")["messages_list"]
+        )
+        typer.echo(
+            f"Dumping {len(conv_dataset)} conversations to {filename}"
+        ) if not quiet else None
         conv_dataset.to_json(dump_dir / filename)

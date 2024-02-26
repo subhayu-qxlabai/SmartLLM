@@ -11,12 +11,14 @@ from models.outputs import StepsOutput
 from models.extractor import ExtractorInput
 from models.generic import Question, QuestionSplit
 from models.messages import (
+    AlpacaMessagesList,
     MessagesList, 
     Messages, 
     SystemMessage, 
     UserMessage, 
     AssistantMessage, 
-    AlpacaMessages
+    AlpacaMessages,
+    ConversationFormat,
 )
 
 
@@ -90,16 +92,13 @@ class DatasetRow(BaseModel):
             return None if none_on_fail else val
     
     def __hash__(self):
-        s = ""
-        if self.system:
-            s += str(self.system)
-        if self.input:
-            s += str(self.input)
-        if self.output:
-            s += str(self.output)
-        if not s:
-            s = str(self.uid)
-        return hash(s)
+        return hash((
+            # self.llm, 
+            # self.system, 
+            str(self.input), 
+            str(self.output), 
+            # self.uid, 
+        ))
     
     def __repr__(self):
         return f"{self.__class__.__name__}(llm={self.llm}, system={self.system}, input={self.input}, output={self.output})"
@@ -170,23 +169,26 @@ class LLMDatasetBase(BaseModel):
     def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
         return cls(rows=DatasetRow.from_dir(dir, log_errors))
 
-    def to_messages(self):
-        m_list = MessagesList()
-        for row in self.rows:
-            m = Messages()
-            if row.system:
-                m.messages.append(SystemMessage(content=row.system))
-            if row.input:
-                m.messages.append(UserMessage(content=row.input))
-            if row.output and len(m) >= 1:
-                m.messages.append(AssistantMessage(content=row.output))
-            if len(m) >= 2:
-                m_list.messages_list.append(m)
-        return m_list
-    
-    def to_alpaca(self):
-        alpaca_rows = [row.to_alpaca() for row in self.rows]
-        return [row for row in alpaca_rows if row is not None]
+    def to_messages(self, fmt: ConversationFormat = ConversationFormat.alpaca):
+        if fmt in [ConversationFormat.alpaca, ConversationFormat.alpaca.value]:
+            alpaca_rows = [row.to_alpaca() for row in self.rows]
+            return AlpacaMessagesList(
+                messages_list=[row for row in alpaca_rows if row is not None]
+            )
+        elif fmt in [ConversationFormat.openai, ConversationFormat.openai.value]:
+            m_list = MessagesList()
+            for row in self.rows:
+                m = Messages()
+                if row.system:
+                    m.messages.append(SystemMessage(content=row.system))
+                if row.input:
+                    m.messages.append(UserMessage(content=row.input))
+                if row.output and len(m) >= 1:
+                    m.messages.append(AssistantMessage(content=row.output))
+                if len(m) >= 2:
+                    m_list.messages_list.append(m)
+            return m_list
+        raise NotImplementedError(f"Unsupported format: {fmt}")
     
     def to_file(self, file: str | Path = "generated.json", dir: str | Path = DEFAULT_DATASET_DIR):
         print(f"Dumped {len(self.rows)} rows to {(Path(dir) / file).absolute().as_posix()!r}")
@@ -202,11 +204,23 @@ class LLMDatasetBase(BaseModel):
                 if log_errors:
                     print(f"Got error: {e}")
     
-    def fill_systems(self, systems: list[str]):
+    def fill_systems(self, systems: list[str] = None):
+        _systems = {x.system for x in self.rows if x.system}
+        if not isinstance(systems, list):
+            systems = []
+        systems = systems + list(_systems)
+        systems = list({x for x in systems if isinstance(x, str)})
+        if len(systems) == 0:
+            return self
         for row in self.rows:
             if not row.system:
                 row.system = random.choice(systems)
-        return self
+        return self.__class__(rows=self.rows)
+    
+    def unique(self):
+        return self.__class__(
+            rows=list({hash(x): x for x in self.rows}.values())
+        )
     
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(rows={len(self.rows)})"
@@ -224,7 +238,9 @@ class LLMDatasetBase(BaseModel):
         return item in self.rows
     
     def __add__(self, other: "LLMDatasetBase"):
-        return self.__class__(rows=self.rows + other.rows)
+        if type(self) != type(other):
+            raise NotImplementedError(f"Cannot add {type(self)} and {type(other)}")
+        return self.__class__(rows=self.rows + other.rows).fill_systems().unique()
 
 class LLMDatasetWithTypes(LLMDatasetBase):
     rows: list[DatasetRow|LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []
