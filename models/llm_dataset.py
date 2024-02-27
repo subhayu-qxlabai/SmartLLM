@@ -190,19 +190,23 @@ class LLMDatasetBase(BaseModel):
             return m_list
         raise NotImplementedError(f"Unsupported format: {fmt}")
     
-    def to_file(self, file: str | Path = "generated.json", dir: str | Path = DEFAULT_DATASET_DIR):
+    def to_file(self, file: str | Path = "all.json", dir: str | Path = DEFAULT_DATASET_DIR):
         print(f"Dumped {len(self.rows)} rows to {(Path(dir) / file).absolute().as_posix()!r}")
         with open(Path(dir) / file, "w") as f:
             f.write(self.model_dump_json())
 
     @classmethod
-    def from_file(cls, file: str | Path = "generated.json", dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
+    def from_file(
+        cls, 
+        file: str | Path = "all.json", 
+        dir: str | Path = DEFAULT_DATASET_DIR, 
+        log_errors = True,
+    ):
         with open(Path(dir) / file, "r") as f:
             try:
                 return cls.model_validate_json(f.read())
             except Exception as e:
-                if log_errors:
-                    print(f"Got error: {e}")
+                print(f"Got error: {e}") if log_errors else None
     
     def fill_systems(self, systems: list[str] = None):
         _systems = {x.system for x in self.rows if x.system}

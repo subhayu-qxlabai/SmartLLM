@@ -175,6 +175,7 @@ def to_file(
 
 
 @app.command(
+    name="to-conv",
     help="Convert a dataset from a file or directory to conversations in a specified format"
 )
 def to_conversations(

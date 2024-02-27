@@ -195,6 +195,9 @@ class MessagesList(BaseMessagesList):
 
 class AlpacaMessagesList(BaseMessagesList):
     messages_list: list[AlpacaMessages] = []
+    
+    def to_messages(self) -> MessagesList:
+        return MessagesList(messages_list=[x.to_messages() for x in self.messages_list])
 
 
 def messages_factory(fmt: ConversationFormat):
