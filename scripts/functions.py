@@ -8,7 +8,7 @@ from models.inputs import Function
 from helpers.vectorstore.faisser import FaissDB, Document
 
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 def try_load_model(model: BaseModel, data: dict):

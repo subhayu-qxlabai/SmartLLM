@@ -16,7 +16,7 @@ from models.llm_dataset import (
 )
 
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 class ParallelismType(str, Enum):
@@ -26,7 +26,7 @@ class ParallelismType(str, Enum):
 
 @app.command(help="Generates dataset")
 def generate(
-    generate_for: int = typer.Argument(10, min=1, help="Number of topics to generate"),
+    generate_for: int = typer.Argument(..., min=1, help="Number of topics to generate"),
     topics_file: str = typer.Option(
         "yahoo_questions_1.4M.json",
         "--topics-file",
@@ -70,7 +70,7 @@ def generate(
         help="File to store the generated topics for hash",
     ),
 ):
-    assert generate_for > 0, "generate_for must be greater than 0"
+    assert isinstance(generate_for, int) and generate_for > 0, "generate_for must be greater than 0"
     topics_file: Path | None = Path(topics_file) if topics_file is not None else None
     dg = DatasetGenerator(
         dump_dir=dump_dir,
