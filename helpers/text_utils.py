@@ -35,7 +35,7 @@ class TextUtils:
         )
         escaped: str = re.escape(encoded)
         regex: str = re.sub(TextUtils.group_sub_pattern, r"(?P<\1>.+)", escaped)
-        match = re.match(regex, formatted_text, re.DOTALL)
+        match = re.match(f".*{regex}.*", formatted_text, re.DOTALL)
         if not match:
             return {}
         return match.groupdict()
