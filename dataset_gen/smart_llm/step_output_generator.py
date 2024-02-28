@@ -5,7 +5,7 @@ from models.inputs import StepsInput
 from models.outputs import StepsOutput
 from helpers.utils import try_json_dumps
 from helpers.call_openai import call_openai_api
-from dataset_gen.json_generator import JSONGenerator
+from dataset_gen.base.json_generator import JSONGenerator
 
 DEFAULT_DUMP_DIR = Path("generated/step_output")
 

@@ -186,6 +186,10 @@ class BaseMessagesList(BaseModel):
                 ] + x.messages
         return self.__class__(messages_list=self.messages_list)
     
+    def to_jsonl(self, jsonl_file: str | Path):
+        d = Dataset.from_list(self.model_dump(mode="json")["messages_list"])
+        d.to_json(str(jsonl_file))
+    
     def __repr__(self):
         return f"{self.__class__.__name__}(messages_list={len(self.messages_list)})"
     
@@ -196,7 +200,7 @@ class MessagesList(BaseMessagesList):
 class AlpacaMessagesList(BaseMessagesList):
     messages_list: list[AlpacaMessages] = []
     
-    def to_messages(self) -> MessagesList:
+    def to_openai(self) -> MessagesList:
         return MessagesList(messages_list=[x.to_messages() for x in self.messages_list])
 
 

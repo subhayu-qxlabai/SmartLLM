@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Callable
 
 from helpers.call_openai import call_openai_api
-from dataset_gen.json_array_generator import JSONArrayGenerator
+from dataset_gen.base.json_array_generator import JSONArrayGenerator
 from helpers.utils import clean_json_str, try_json_loads, try_json_load
 
 DEFAULT_DUMP_DIR = Path("generated/json")

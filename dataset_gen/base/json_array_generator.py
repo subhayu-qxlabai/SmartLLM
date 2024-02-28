@@ -4,7 +4,7 @@ from itertools import chain
 from typing import Callable
 
 from helpers.call_openai import call_openai_api
-from dataset_gen.model_validator import BaseModelValidator
+from dataset_gen.base.model_validator import BaseModelValidator
 from helpers.utils import (
     num_tokens_from_messages,
     clean_json_str,

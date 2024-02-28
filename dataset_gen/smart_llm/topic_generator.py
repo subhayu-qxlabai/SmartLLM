@@ -4,7 +4,7 @@ from random import choices
 from typing import Callable
 
 from helpers.call_openai import call_openai_api
-from dataset_gen.json_array_generator import JSONArrayGenerator
+from dataset_gen.base.json_array_generator import JSONArrayGenerator
 
 
 class TopicGenerator(JSONArrayGenerator):

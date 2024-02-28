@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
 from models.inputs import StepsInput, Function
-from dataset_gen.model_validator import BaseModelValidator
+from dataset_gen.base.model_validator import BaseModelValidator
 
 DEFAULT_DUMP_DIR = Path("generated/step_input")
 DEFAULT_VECTORESTORE_PATH = Path("functions.pkl")

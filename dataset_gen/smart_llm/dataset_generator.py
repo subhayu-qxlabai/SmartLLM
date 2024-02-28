@@ -3,11 +3,11 @@ from multiprocessing import Pool
 from typing import Callable, Literal
 from itertools import chain, zip_longest
 
-from dataset_gen.topic_generator import TopicGenerator
-from dataset_gen.question_generator import QuestionGenerator
-from dataset_gen.split_generator import QuestionSplitGenerator
-from dataset_gen.step_input_generator import StepInputGenerator
-from dataset_gen.step_output_generator import StepOutputGenerator
+from dataset_gen.smart_llm.topic_generator import TopicGenerator
+from dataset_gen.smart_llm.question_generator import QuestionGenerator
+from dataset_gen.smart_llm.split_generator import QuestionSplitGenerator
+from dataset_gen.smart_llm.step_input_generator import StepInputGenerator
+from dataset_gen.smart_llm.step_output_generator import StepOutputGenerator
 from helpers.utils import run_parallel_exec_but_return_in_order
 from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
