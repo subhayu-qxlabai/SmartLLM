@@ -167,7 +167,10 @@ def to_file(
                 )
                 if existing_dataset:
                     typer.echo(f"Merging {len(existing_dataset)} existing rows with {len(dataset)} new ones...")
-                    dataset = existing_dataset.get_llm_type_rows(LLMType(_type)) + dataset
+                    if _type == "all" and isinstance(dataset, LLMDataset):
+                        dataset = existing_dataset + dataset
+                    else:
+                        dataset = existing_dataset.get_llm_type_rows(LLMType(_type)) + dataset                
         typer.echo(
             f"Dumping {_type} dataset with {len(dataset)} rows to {filename}"
         ) if not quiet else None
