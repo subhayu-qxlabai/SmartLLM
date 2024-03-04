@@ -229,15 +229,25 @@ class LLMDatasetBase(BaseModel):
         )
         
     @classmethod
-    def from_messages(cls, messages: AlpacaMessagesList, llm_type: LLMType):
-        rows = [llm_row_factory(llm_type).try_model_validate(
-            val={
-                "system": x.system,
-                "input": x.input,
-                "output": x.output,
-            },
-            none_on_fail=True,
-        ) for x in messages]
+    def from_messages(cls, messages: AlpacaMessagesList, llm_type: LLMType, strict: bool = False):
+        if strict:
+            rows = [llm_row_factory(llm_type).try_model_validate(
+                val={
+                    "system": x.system,
+                    "input": x.input,
+                    "output": x.output,
+                },
+                none_on_fail=True,
+            ) for x in messages]
+        else:
+            rows = [
+                DatasetRow(
+                    llm=llm_type, 
+                    system=x.system, 
+                    input=x.input, 
+                    output=x.output
+                ) for x in messages
+            ]
         return cls(rows=[x for x in rows if x is not None])
 
     @classmethod
