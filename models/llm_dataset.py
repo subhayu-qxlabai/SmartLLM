@@ -251,8 +251,8 @@ class LLMDatasetBase(BaseModel):
         return cls(rows=[x for x in rows if x is not None])
 
     @classmethod
-    def from_dataset(cls, d: Dataset, llm_type: LLMType):
-        return cls.from_messages(AlpacaMessagesList.from_dataset(d), llm_type)
+    def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
+        return cls.from_messages(AlpacaMessagesList.from_dataset(d), llm_type, strict)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(rows={len(self.rows)})"
