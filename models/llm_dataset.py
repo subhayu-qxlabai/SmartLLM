@@ -4,6 +4,7 @@ import random
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, Field, root_validator
+from datasets import Dataset
 
 from helpers.utils import get_timestamp_uid
 from models.inputs import StepsInput
@@ -83,9 +84,10 @@ class DatasetRow(BaseModel):
         )
     
     @classmethod
-    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False) -> "DatasetRow" | None:
+    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False):
         try:
-            return try_load_model(cls, val)
+            m: cls = try_load_model(cls, val)
+            return m
         except Exception as e:
             if verbose:
                 print(f"Failed to load model: {e}")
@@ -237,7 +239,11 @@ class LLMDatasetBase(BaseModel):
             none_on_fail=True,
         ) for x in messages]
         return cls(rows=[x for x in rows if x is not None])
-    
+
+    @classmethod
+    def from_dataset(cls, d: Dataset, llm_type: LLMType):
+        return cls.from_messages(AlpacaMessagesList.from_dataset(d), llm_type)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(rows={len(self.rows)})"
     
@@ -245,7 +251,8 @@ class LLMDatasetBase(BaseModel):
         return len(self.rows)
     
     def __getitem__(self, index):
-        return self.__class__(rows=self.rows[index])
+        rows = self.rows[index]
+        return self.__class__(rows=rows if isinstance(rows, list) else [rows])
     
     def __iter__(self):
         return iter(self.rows)

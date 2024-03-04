@@ -190,7 +190,7 @@ class BaseMessagesList(BaseModel):
                 ] + x.messages
         return self.__class__(messages_list=self.messages_list)
     
-    def to_dataset(self):
+    def to_dataset(self) -> Dataset:
         d = Dataset.from_list(self.model_dump(mode="json")["messages_list"])
         return d
     
