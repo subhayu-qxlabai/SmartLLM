@@ -138,17 +138,21 @@ class BaseMessagesList(BaseModel):
         return item in self.messages_list
     
     @classmethod
-    def from_jsonl(cls, jsonl_file: str | Path):
-        try:
-            d = Dataset.from_json(str(jsonl_file))
-        except:
-            return cls()
+    def from_dataset(cls, d: Dataset):
         d_type: type[Messages|AlpacaMessages] = cls.model_fields[
             'messages_list'
         ].annotation.__args__[0]
         if set(d[0]) - set(d_type.model_fields) != set():
             return cls()
         return cls(messages_list=[d_type(**x) for x in d.to_list()])
+    
+    @classmethod
+    def from_jsonl(cls, jsonl_file: str | Path):
+        try:
+            d = Dataset.from_json(str(jsonl_file))
+        except:
+            return cls()
+        return cls.from_dataset(d)
     
     def unique(self):
         return self.__class__(
@@ -186,9 +190,12 @@ class BaseMessagesList(BaseModel):
                 ] + x.messages
         return self.__class__(messages_list=self.messages_list)
     
-    def to_jsonl(self, jsonl_file: str | Path):
+    def to_dataset(self):
         d = Dataset.from_list(self.model_dump(mode="json")["messages_list"])
-        d.to_json(str(jsonl_file))
+        return d
+    
+    def to_jsonl(self, jsonl_file: str | Path):
+        self.to_dataset().to_json(str(jsonl_file))
     
     def __repr__(self):
         return f"{self.__class__.__name__}(messages_list={len(self.messages_list)})"

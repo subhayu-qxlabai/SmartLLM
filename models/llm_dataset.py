@@ -29,7 +29,7 @@ DEFAULT_DATASET_DIR = Path("generated/dataset")
 def try_load_model(model: BaseModel, val):
     try:
         if isinstance(val, model):
-            return val
+            return model.model_validate(val)
         elif isinstance(val, str):
             return model.model_validate_json(val)
         elif isinstance(val, dict):
@@ -83,9 +83,9 @@ class DatasetRow(BaseModel):
         )
     
     @classmethod
-    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False):
+    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False) -> "DatasetRow" | None:
         try:
-            return cls.model_validate(val)
+            return try_load_model(cls, val)
         except Exception as e:
             if verbose:
                 print(f"Failed to load model: {e}")
@@ -225,6 +225,18 @@ class LLMDatasetBase(BaseModel):
         return self.__class__(
             rows=list({hash(x): x for x in self.rows}.values())
         )
+        
+    @classmethod
+    def from_messages(cls, messages: AlpacaMessagesList, llm_type: LLMType):
+        rows = [llm_row_factory(llm_type).try_model_validate(
+            val={
+                "system": x.system,
+                "input": x.input,
+                "output": x.output,
+            },
+            none_on_fail=True,
+        ) for x in messages]
+        return cls(rows=[x for x in rows if x is not None])
     
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(rows={len(self.rows)})"
