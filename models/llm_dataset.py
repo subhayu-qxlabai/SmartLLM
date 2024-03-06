@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, root_validator
 from datasets import Dataset
 
-from helpers.utils import get_timestamp_uid
+from helpers.utils import get_timestamp_uid, try_json_loads
 from models.inputs import StepsInput
 from models.outputs import StepsOutput
 from models.extractor import ExtractorInput
@@ -137,12 +137,14 @@ class LLM2DatasetRow(DatasetRow):
 class LLM3DatasetRow(DatasetRow):
     llm: LLMType = LLMType.LLM3
     input: ExtractorInput | None
+    output: dict | None
     
     @root_validator(pre=True)
     def validate(cls, values: dict|BaseModel):
         if isinstance(values, BaseModel):
             values = values.model_dump()
         values["input"] = try_load_model(ExtractorInput, values["input"])
+        values["output"] = try_json_loads(values["output"])
         return values
 
 

@@ -38,7 +38,7 @@ class FunctionEntry(BaseModel):
 
     @root_validator(pre=True)
     def validate_parameters(cls, values):
-        values["parameters"] = [x for x in values.get("parameters") if x.get("value")]
+        values["parameters"] = [x for x in values.get("parameters") if (x.get("value") if isinstance(x, dict) else x.value if hasattr(x, "value") else x)]
         return values
 
 
