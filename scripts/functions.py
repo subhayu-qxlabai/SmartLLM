@@ -34,7 +34,9 @@ def vdb_from_functions(
 ):
     docs = get_function_docs(functions)
     typer.echo(f"Dumping {len(docs)} functions to {dump_path.absolute().as_posix()!r}")
-    return FaissDB(filename=dump_path, documents=docs)
+    if dump_path.exists():
+        FaissDB(filename=dump_path).add_documents(docs, write_to_disk=True)
+    FaissDB(filename=dump_path, documents=docs)
 
 
 @app.command(help="Create a vector database from a json file of functions")
@@ -50,4 +52,4 @@ def vdb_from_json(
     ]
     if dump_path is None:
         dump_path = json_path.with_suffix(".pkl")
-    return vdb_from_functions(functions, dump_path=dump_path)
+    vdb_from_functions(functions, dump_path=dump_path)
