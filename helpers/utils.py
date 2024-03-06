@@ -10,6 +10,7 @@ from typing import Callable, Iterable
 from random import choices, randrange, shuffle,random
 
 import tiktoken
+from pydantic import BaseModel
 
 
 SPECIAL_CHAR_REGEX = re.compile('[@#,.:;!?\s]')
@@ -221,3 +222,75 @@ def convert_to_str(val: str | dict | None) -> str | None:
     if isinstance(val, dict):
         return json.dumps(val)
     return val
+
+
+def recursive_string_operator(
+    data, fn: Callable[[str], str], skip_keys: list[str] = [], max_workers=4
+):
+    """
+    Recursively applies the given function to the input data, handling strings, lists, tuples, sets, dictionaries, and BaseModel objects.
+
+    Args:
+        data: The input data to be processed.
+        fn: The function to be applied to the data.
+        skip_keys: A list of keys to be skipped when processing dictionaries.
+        max_workers: The maximum number of workers for parallel execution. Defaults to 4.
+
+    Returns:
+        The processed data in the same format as the input.
+        
+    Note:
+        The `fn` function should take a single argument (a string) and return a string. 
+        Also, any Exceptions raised by the `fn` function should be caught and handled appropriately.
+        
+        The `skip_keys` parameter works only when the input data is a dictionary or a BaseModel object. 
+    
+    Example:
+        >>> data = "Hello, World!"
+        >>> fn = lambda x: x.upper()
+        >>> recursive_string_operator(data, fn)
+        'HELLO, WORLD!'
+        >>> data = {"a": 1, "b": [2, "hello", ["world"]], "c": {"d": "hi", "e": "hello"}, "f": "world", "g": fn}
+        >>> recursive_string_operator(data, fn, skip_keys=["d", "f"])
+        {'a': 1, 'b': [2, 'HELLO', ['WORLD']], 'c': {'d': 'hi', "e": "HELLO"}, "f": "world", "g": <function __main__.<lambda>(x)>}
+    """
+    if isinstance(data, str):
+        return fn(data)
+    base_parallel_func = lambda _data: recursive_string_operator(
+        data=_data, fn=fn, skip_keys=skip_keys or [], max_workers=max_workers
+    )
+    if isinstance(data, (list, tuple, set)):
+        are_all_strings = all([isinstance(x, str) for x in data])
+        if are_all_strings:
+            _combined = "||".join(data)
+            if len(_combined) < 1000:
+                _operated = fn(_combined).split("||")
+                if len(_operated) == len(data):
+                    return _operated
+        return [
+            x
+            for x in run_parallel_exec_but_return_in_order(
+                base_parallel_func, data, max_workers=max_workers
+            )
+        ]
+    if isinstance(data, dict):
+        v_return_tuples = run_parallel_exec(
+            base_parallel_func,
+            [v for k, v in data.items() if k not in skip_keys],
+            max_workers=max_workers,
+        )
+        v_return_tuples.sort(
+            key=lambda x: [v for k, v in data.items() if k not in skip_keys].index(x[0])
+        )
+        return {
+            k: (
+                ([y for x, y in v_return_tuples if x == v] or [v])[0]
+                if k not in skip_keys
+                else v
+            )
+            for k, v in data.items()
+        }
+    if isinstance(data, BaseModel):
+        d = recursive_string_operator(data.model_dump(mode="json"), fn, skip_keys)
+        return data.__class__(**d)
+    return data
