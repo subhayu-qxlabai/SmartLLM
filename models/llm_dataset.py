@@ -250,7 +250,7 @@ class LLMDatasetBase(BaseModel):
                     output=x.output
                 ) for x in messages
             ]
-        return cls(rows=[x for x in rows if x is not None])
+        return cls(rows=[x for x in rows if None not in [x, x.input, x.output]])
 
     @classmethod
     def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
@@ -302,9 +302,12 @@ class LLMDataset(LLMDatasetBase):
             dataset = self
         rows = [
             llm_row_factory(row.llm).try_model_validate(
-                row.model_dump(mode="json"), none_on_fail=True, verbose=verbose
+                row.model_dump(), none_on_fail=True, verbose=verbose
             )
             for row in dataset.rows
         ]
-        return LLMDatasetWithTypes(rows=[row for row in rows if row is not None])
+        llmdt = LLMDatasetWithTypes(rows=[row for row in rows if row is not None])
+        del rows
+        llmdt.rows =  [row for row in llmdt.rows if None not in [row, row.input, row.output]]
+        return llmdt
         
