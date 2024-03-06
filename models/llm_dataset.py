@@ -253,6 +253,18 @@ class LLMDatasetBase(BaseModel):
     @classmethod
     def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
         return cls.from_messages(AlpacaMessagesList.from_dataset(d), llm_type, strict)
+    
+    @classmethod
+    def from_jsonl(cls, jsonl_file: str | Path, llm_type: LLMType, strict: bool = False):
+        d = cls.from_dataset(Dataset.from_json(jsonl_file), llm_type, strict)
+        return d
+
+    def page(self, page_size: int = 10, offset: int = 0):
+        return self.__class__(rows=self.rows[offset:offset+page_size])
+    
+    def page_iterator(self, page_size: int = 10, offset: int = 0):
+        for i in range(offset, len(self.rows), page_size):
+            yield self.__class__(rows=self.rows[i:i+page_size])
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(rows={len(self.rows)})"
