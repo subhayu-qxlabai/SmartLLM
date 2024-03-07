@@ -2,7 +2,11 @@ from pathlib import Path
 from random import choice
 from itertools import chain
 
-from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers import SentenceTransformer
+except:
+    from unittest.mock import MagicMock
+    SentenceTransformer = MagicMock
 
 from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
@@ -49,6 +53,8 @@ class StepInputGenerator(BaseModelValidator):
         return embeddings
 
     def _search_task(self, tsk: str, k: int = 3, by_vector: bool = False):
+        if isinstance(SentenceTransformer, MagicMock):
+            by_vector = False
         if by_vector:
             return self.vdb.similarity_search_with_score_by_vector(
                 self.generate_embeddings(tsk), k=k
