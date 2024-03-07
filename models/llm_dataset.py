@@ -278,7 +278,11 @@ class LLMDatasetBase(BaseModel):
     def page(self, page_size: int = 10, offset: int = 0):
         return self.__class__(rows=self.rows[offset:offset+page_size])
     
-    def page_iterator(self, page_size: int = 10, offset: int = 0):
+    def page_iterator(self, page_size: int = 10, offset: int = 0, use_tqdm=True):
+        if use_tqdm:
+            from tqdm import tqdm
+        else:
+            tqdm = lambda x: x
         for i in tqdm(range(offset, len(self.rows), page_size)):
             yield self.__class__(rows=self.rows[i:i+page_size])
 

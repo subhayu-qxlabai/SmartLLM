@@ -1,6 +1,4 @@
-from pathlib import Path
 import re
-from tqdm import tqdm
 
 from helpers.utils import run_parallel_exec_but_return_in_order
 from translators.translator import Translator

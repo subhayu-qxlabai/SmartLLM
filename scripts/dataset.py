@@ -6,7 +6,7 @@ import typer
 from datasets import Dataset
 
 from translators import DatasetTranslator
-from helpers.utils import try_json_load, get_ts_filename
+from helpers.utils import run_parallel_exec_but_return_in_order, try_json_load, get_ts_filename
 from dataset_gen import DatasetGenerator, DEFAULT_TOPICS_FILE
 from models.messages import ConversationFormat, messages_list_factory
 from models.llm_dataset import (
@@ -272,8 +272,11 @@ def translate_dataset(
     quiet: bool = typer.Option(
         False, help="Don't print verbose messages"
     ),
+    parallel_rows: int = typer.Option(
+        10, "--parallel-rows", "-r", min=1, help="Number of rows to process in parallel"
+    ),
     workers: int = typer.Option(
-        4, "--workers", "-w", min=1, help="Number of parallel workers to use"
+        4, "--workers", "-w", min=1, help="Number of parallel workers to use for internal processing (inside each row)"
     ),
     page_size: int = typer.Option(
         None, "--page-size", "-p", min=1, help="Now of rows to take"
@@ -295,19 +298,26 @@ def translate_dataset(
     dataset = LLMDataset.from_jsonl(jsonl_file, llm_type)
     dataset = dataset.get_llm_type_rows(llm_type, verbose=not quiet)
     shuffle(dataset.rows)
-    if page_size is not None and page_size > 0: 
+    if page_size is not None and page_size > 0:
         dataset = dataset.page(page_size, 0)
     typer.echo(f"Translating and dumping {len(dataset)} rows to {dump_file}")
     
     dump_file.parent.mkdir(parents=True, exist_ok=True) 
     dt = DatasetTranslator(language)
-    [
-        dump_file.open("a").write(
-            dt
-            .translate_dataset(d, workers)
-            .to_messages()
-            .messages_list[0]
-            .model_dump_json() + "\n"
+    
+    def translate_and_dump(_dataset: LLMDatasetWithTypes):
+        for _d in _dataset.page_iterator(1):
+            dump_file.open("a").write(
+                dt
+                .translate_dataset(_d, workers)
+                .to_messages()
+                .messages_list[0]
+                .model_dump_json() + "\n"
+            )
+    
+    typer.echo(f"Running {parallel_rows} rows in parallel")
+    for d in dataset.page_iterator(page_size=parallel_rows):
+        run_parallel_exec_but_return_in_order(
+            translate_and_dump, 
+            d.page_iterator(1, use_tqdm=False)
         )
-        for d in dataset.page_iterator(page_size=1)
-    ]
