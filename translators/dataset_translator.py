@@ -18,6 +18,14 @@ from models.llm_dataset import (
 
 class DatasetTranslator(Translator):
     """Class for translating datasets and rows"""
+    strings_to_reject = ["markdown", "html", "text"]
+    strings_to_reject = re.compile(
+        f"\s*{'|'.join(strings_to_reject)}\s*", flags=re.IGNORECASE
+    )
+    language_to_replace = re.compile(
+        f"\s*{'|'.join(Translator.supported_languages)}\s*", flags=re.IGNORECASE
+    )
+    
     model_skipkeys_map = {
         Question: [],
         QuestionSplit: ["tasks"],
@@ -49,20 +57,15 @@ class DatasetTranslator(Translator):
         super().__init__(language, self._predicate)
 
     def _predicate(self, text: str):
-        function_or_extract_references = re.findall(r"{{[\w\.]+}}", text)
-        if function_or_extract_references:
-            return text
-        strings_to_reject = ["markdown", "html", "text"]
-        strings_to_reject = re.compile(
-            f"\s*{'|'.join(strings_to_reject)}\s*", flags=re.IGNORECASE
-        )
-        language_to_replace = re.compile("English", flags=re.IGNORECASE)
+        # function_or_extract_references = re.findall(r"{{[\w\.]+}}", text)
+        # if function_or_extract_references:
+        #     return text
         if len(text) <= 2:
             return text
-        if strings_to_reject.search(text):
+        if self.strings_to_reject.search(text):
             return text
-        if language_to_replace.search(text):
-            return language_to_replace.sub(self.language, text)
+        if self.language_to_replace.search(text):
+            return self.language_to_replace.sub(self.language, text)
 
     def translate(
         self,

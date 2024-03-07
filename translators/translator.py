@@ -1,10 +1,21 @@
+from itertools import chain
 from typing import Any, Callable
 from helpers.call_openai import call_openai_api
 from helpers.utils import recursive_string_operator, run_parallel_exec_but_return_in_order
 
 class Translator:
     """A class for translating strings. Can be used to translate nested objects like lists, dictionaries, BaseModel objects, etc."""
-    def __init__(self, language: str, predicate: Callable[[str], str|None]) -> None:
+    
+    region_languages = {
+        "indian": ["Hindi", "Bengali", "Punjabi", "Telugu", "Marathi", "Tamil", "Urdu", "Gujarati", "Kannada", "Odia", "Malayalam", "Sanskrit", "Assamese", "Maithili", "Konkani", "Manipuri", "Nepali", "Santali", "Sindhi", "Kashmiri"],
+        "international": ["English", "Spanish", "French", "German", "Italian", "Dutch", "Portuguese", "Russian", "Mandarin Chinese", "Cantonese Chinese", "Japanese", "Korean", "Arabic", "Turkish", "Greek", "Swedish", "Danish", "Finnish", "Norwegian", "Polish", "Hungarian", "Czech", "Romanian", "Thai", "Indonesian", "Malay", "Vietnamese", "Hebrew", "Slovak", "Bulgarian", "Croatian", "Lithuanian", "Slovenian", "Latvian", "Estonian", "Afrikaans", "Zulu", "Xhosa", "Swahili", "Amharic", "Albanian", "Armenian", "Azerbaijani", "Basque", "Belarusian", "Bosnian", "Catalán", "Cebuano", "Corsican", "Esperanto", "Frisian", "Galician", "Georgian", "Guarani", "Haitian Creole", "Hausa", "Hawaiian", "Icelandic", "Irish", "Javanese", "Kazakh", "Khmer", "Kurdish", "Kyrgyz", "Lao", "Latin", "Latvian", "Luxembourgish", "Malagasy", "Maori", "Mongolian", "Burmese", "Pashto", "Persian", "Samoan", "Sesotho", "Shona", "Somali", "Sundanese", "Tajik"],
+    }
+    """Map of regions to supported languages."""
+    
+    supported_languages = list(chain(*region_languages.values()))
+    """Supported languages for translation."""
+    
+    def __init__(self, language: str, predicate: Callable[[str], str|None] = None) -> None:
         """
         Initializes the Translator class.
         
@@ -12,7 +23,7 @@ class Translator:
             language (str): The language to translate to.
             predicate ((str) -> (str | None)): A function that takes in a string and returns a string or None. 
                 If a string is returned, that string will be returned. 
-                If None is returned, the input string will be translated.
+                If None is returned, the input string will be translated. Defaults to None.
         
         Returns:
             None
@@ -38,11 +49,9 @@ class Translator:
                 {"role": "assistant", "content": "PubMed"},
                 {"role": "user", "content": "'Alzheimer' to Hindi"},
                 {"role": "assistant", "content": "अल्जाइमर"},
+                {"role": "user", "content": "'Summarize the current progress on the Mars exploration missions in 2023 based on the latest news, articles, and space agency updates. Contexts: {{step_1.function.function_1}}; {{step_2.function.function_2}}; {{step_3.function.function_3}}.' to Bengali"},
+                {"role": "assistant", "content": "২০২৩ সালে মঙ্গল অভিযানের বর্তমান অগ্রগতি সারসংক্ষেপ করুন, সর্বশেষ খবর, প্রবন্ধ এবং মহাকাশ সংস্থার আপডেটের ভিত্তিতে। প্রেক্ষাপটগুলি: {{step_1.function.function_1}}; {{step_2.function.function_2}}; {{step_3.function.function_3}}।"},
                 {"role": "user", "content": f"{text!r} to {self.language}"}
-                # {"role": "user", "content": "'English' to Bengali"},
-                # {"role": "assistant", "content": "Bengali"},
-                # {"role": "user", "content": "'Hindi' to Afrikaans"},
-                # {"role": "assistant", "content": "Afrikaans"},
             ]
         )
         if not hasattr(response, "choices"):
@@ -50,9 +59,10 @@ class Translator:
         return response.choices[0].message.content
         
     def _operator(self, text: str):
-        r = self.predicate(text)
-        if r is not None:
-            return r
+        if callable(self.predicate):
+            r = self.predicate(text)
+            if r is not None:
+                return r
         return self._translate_text(text)
         
     def _translate_any(self, data, skip_keys: list[str] = [], workers: int = 4) -> Any:
