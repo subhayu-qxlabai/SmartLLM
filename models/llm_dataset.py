@@ -269,7 +269,7 @@ class LLMDatasetBase(BaseModel):
         return cls.from_messages(AlpacaMessagesList.from_dataset(d), llm_type, strict)
     
     @classmethod
-    def from_jsonl(cls, jsonl_file: str | Path, llm_type: LLMType, strict: bool = False):
+    def from_jsonl(cls, jsonl_file: str | Path, llm_type: LLMType = None, strict: bool = False):
         if llm_type is None:
             llm_type = LLMType.from_substr(jsonl_file.stem, none_on_fail=False)
         d = cls.from_dataset(Dataset.from_json(str(jsonl_file)), llm_type, strict)

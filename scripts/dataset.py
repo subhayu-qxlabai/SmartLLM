@@ -292,9 +292,6 @@ def translate_dataset(
     assert jsonl_file.is_file(), f"{jsonl_file} is not a file"
     assert jsonl_file.suffix == ".jsonl", f"{jsonl_file} is not a .jsonl file"
     dump_file = Path(dump_dir) / f"{jsonl_file.stem}_{language.lower()}.jsonl"
-    if llm_type is None:
-        llm_type = LLMType.from_substr(jsonl_file.stem, none_on_fail=False)
-
     dataset = LLMDataset.from_jsonl(jsonl_file, llm_type)
     dataset = dataset.get_llm_type_rows(llm_type, verbose=not quiet)
     shuffle(dataset.rows)
