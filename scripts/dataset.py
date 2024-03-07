@@ -5,14 +5,15 @@ from random import shuffle
 import typer
 from datasets import Dataset
 
+from translators import DatasetTranslator
 from helpers.utils import try_json_load, get_ts_filename
 from dataset_gen import DatasetGenerator, DEFAULT_TOPICS_FILE
 from models.messages import ConversationFormat, messages_list_factory
 from models.llm_dataset import (
+    LLMType,
     LLMDataset,
     DEFAULT_DATASET_DIR,
     LLMDatasetWithTypes,
-    LLMType,
 )
 
 
@@ -70,7 +71,9 @@ def generate(
         help="File to store the generated topics for hash",
     ),
 ):
-    assert isinstance(generate_for, int) and generate_for > 0, "generate_for must be greater than 0"
+    assert (
+        isinstance(generate_for, int) and generate_for > 0
+    ), "generate_for must be greater than 0"
     topics_file: Path | None = Path(topics_file) if topics_file is not None else None
     dg = DatasetGenerator(
         dump_dir=dump_dir,
@@ -166,20 +169,28 @@ def to_file(
                     file=existing_path.name, dir=existing_path.parent, log_errors=False
                 )
                 if existing_dataset:
-                    typer.echo(f"Merging {len(existing_dataset)} existing rows with {len(dataset)} new ones...")
+                    typer.echo(
+                        f"Merging {len(existing_dataset)} existing rows with {len(dataset)} new ones..."
+                    )
                     if _type == "all" and isinstance(dataset, LLMDataset):
                         dataset = existing_dataset + dataset
                     else:
-                        dataset = existing_dataset.get_llm_type_rows(LLMType(_type)) + dataset                
-        typer.echo(
-            f"Dumping {_type} dataset with {len(dataset)} rows to {filename}"
-        ) if not quiet else None
+                        dataset = (
+                            existing_dataset.get_llm_type_rows(LLMType(_type)) + dataset
+                        )
+        (
+            typer.echo(
+                f"Dumping {_type} dataset with {len(dataset)} rows to {filename}"
+            )
+            if not quiet
+            else None
+        )
         dataset.to_file(filename, dir=dump_dir)
 
 
 @app.command(
     name="to-conv",
-    help="Convert a dataset from a file or directory to conversations in a specified format"
+    help="Convert a dataset from a file or directory to conversations in a specified format",
 )
 def to_conversations(
     source: str = typer.Argument(
@@ -220,19 +231,83 @@ def to_conversations(
         if file_prefix:
             filename = f"{file_prefix}_{filename}"
         if merge_existing and (dump_dir / filename).exists():
-            existing_conv_list = messages_list_factory(
-                conv_format
-            ).from_jsonl(dump_dir / filename)
-            typer.echo(
-                f"Merging {len(existing_conv_list)} existing conversations with {len(conv_list)} new ones for {_type}..."
-            ) if not quiet else None
+            existing_conv_list = messages_list_factory(conv_format).from_jsonl(
+                dump_dir / filename
+            )
+            (
+                typer.echo(
+                    f"Merging {len(existing_conv_list)} existing conversations with {len(conv_list)} new ones for {_type}..."
+                )
+                if not quiet
+                else None
+            )
             conv_list = conv_list + existing_conv_list
         if len(conv_list) == 0:
             continue
         conv_dataset = Dataset.from_list(
             conv_list.model_dump(mode="json")["messages_list"]
         )
-        typer.echo(
-            f"Dumping {len(conv_dataset)} conversations to {filename}"
-        ) if not quiet else None
+        (
+            typer.echo(f"Dumping {len(conv_dataset)} conversations to {filename}")
+            if not quiet
+            else None
+        )
         conv_dataset.to_json(dump_dir / filename)
+
+
+@app.command(name="translate", help="Translate dataset")
+def translate_dataset(
+    language: str = typer.Argument(
+        "hindi", help="Language to translate the dataset to"
+    ),
+    jsonl_file: str = typer.Argument(
+        Path("dataset/llm1_alpaca.jsonl"), help="Path to the JSONL file of the dataset"
+    ),
+    dump_dir: str = typer.Argument(
+        Path("dataset/"), help="Directory to dump the translated dataset to"
+    ),
+    llm_type: LLMType = typer.Option(
+        None, "--llm-type", "-l", help="Dataset for which LLM type. If not specified, LLM type is inferred from the JSONL file name"
+    ),
+    quiet: bool = typer.Option(
+        False, help="Don't print verbose messages"
+    ),
+    workers: int = typer.Option(
+        4, "--workers", "-w", min=1, help="Number of parallel workers to use"
+    ),
+    page_size: int = typer.Option(
+        None, "--page-size", "-p", min=1, help="Now of rows to take"
+    ),
+):
+    if not language.lower() in DatasetTranslator.supported_languages:
+        raise ValueError(
+            f"Language {language} is not supported. "
+            f"Supported languages are {DatasetTranslator.supported_languages}"
+        )
+    jsonl_file: Path = Path(jsonl_file)
+    assert jsonl_file.exists(), f"{jsonl_file} does not exist"
+    assert jsonl_file.is_file(), f"{jsonl_file} is not a file"
+    assert jsonl_file.suffix == ".jsonl", f"{jsonl_file} is not a .jsonl file"
+    dump_file = Path(dump_dir) / f"{jsonl_file.stem}_{language.lower()}.jsonl"
+    if llm_type is None:
+        llm_type = LLMType.from_substr(jsonl_file.stem, none_on_fail=False)
+
+    dataset = LLMDataset.from_jsonl(jsonl_file, llm_type)
+    dataset = dataset.get_llm_type_rows(llm_type, verbose=not quiet)
+    shuffle(dataset.rows)
+    if page_size is not None and page_size > 0: 
+        dataset = dataset.page(page_size, 0)
+    typer.echo(f"Translating and dumping {len(dataset)} rows to {dump_file}")
+    
+    dump_file.parent.mkdir(parents=True, exist_ok=True) 
+    dt = DatasetTranslator(language)
+    [
+        dump_file.open("a").write(
+            dt
+            .translate_dataset(d, workers)
+            .to_messages()
+            .messages_list[0]
+            .model_dump_json() + "\n"
+        )
+        for d in dataset.page_iterator(page_size=1)
+    ]

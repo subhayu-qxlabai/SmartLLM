@@ -7,12 +7,12 @@ class Translator:
     """A class for translating strings. Can be used to translate nested objects like lists, dictionaries, BaseModel objects, etc."""
     
     region_languages = {
-        "indian": ["Hindi", "Bengali", "Punjabi", "Telugu", "Marathi", "Tamil", "Urdu", "Gujarati", "Kannada", "Odia", "Malayalam", "Sanskrit", "Assamese", "Maithili", "Konkani", "Manipuri", "Nepali", "Santali", "Sindhi", "Kashmiri"],
-        "international": ["English", "Spanish", "French", "German", "Italian", "Dutch", "Portuguese", "Russian", "Mandarin Chinese", "Cantonese Chinese", "Japanese", "Korean", "Arabic", "Turkish", "Greek", "Swedish", "Danish", "Finnish", "Norwegian", "Polish", "Hungarian", "Czech", "Romanian", "Thai", "Indonesian", "Malay", "Vietnamese", "Hebrew", "Slovak", "Bulgarian", "Croatian", "Lithuanian", "Slovenian", "Latvian", "Estonian", "Afrikaans", "Zulu", "Xhosa", "Swahili", "Amharic", "Albanian", "Armenian", "Azerbaijani", "Basque", "Belarusian", "Bosnian", "Catalán", "Cebuano", "Corsican", "Esperanto", "Frisian", "Galician", "Georgian", "Guarani", "Haitian Creole", "Hausa", "Hawaiian", "Icelandic", "Irish", "Javanese", "Kazakh", "Khmer", "Kurdish", "Kyrgyz", "Lao", "Latin", "Latvian", "Luxembourgish", "Malagasy", "Maori", "Mongolian", "Burmese", "Pashto", "Persian", "Samoan", "Sesotho", "Shona", "Somali", "Sundanese", "Tajik"],
+        "indian": ["hindi", "bengali", "punjabi", "telugu", "marathi", "tamil", "urdu", "gujarati", "kannada", "odia", "malayalam", "sanskrit", "assamese", "maithili", "konkani", "manipuri", "nepali", "santali", "sindhi", "kashmiri"],
+        "international": ["english", "spanish", "french", "german", "italian", "dutch", "portuguese", "russian", "mandarin chinese", "cantonese chinese", "japanese", "korean", "arabic", "turkish", "greek", "swedish", "danish", "finnish", "norwegian", "polish", "hungarian", "czech", "romanian", "thai", "indonesian", "malay", "vietnamese", "hebrew", "slovak", "bulgarian", "croatian", "lithuanian", "slovenian", "latvian", "estonian", "afrikaans", "zulu", "xhosa", "swahili", "amharic", "albanian", "armenian", "azerbaijani", "basque", "belarusian", "bosnian", "catalán", "cebuano", "corsican", "esperanto", "frisian", "galician", "georgian", "guarani", "haitian creole", "hausa", "hawaiian", "icelandic", "irish", "javanese", "kazakh", "khmer", "kurdish", "kyrgyz", "lao", "latin", "latvian", "luxembourgish", "malagasy", "maori", "mongolian", "burmese", "pashto", "persian", "samoan", "sesotho", "shona", "somali", "sundanese", "tajik"],
     }
     """Map of regions to supported languages."""
     
-    supported_languages = list(chain(*region_languages.values()))
+    supported_languages = [x.lower() for x in chain(*region_languages.values())]
     """Supported languages for translation."""
     
     def __init__(self, language: str, predicate: Callable[[str], str|None] = None) -> None:

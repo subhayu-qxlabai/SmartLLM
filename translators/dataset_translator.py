@@ -1,3 +1,4 @@
+from pathlib import Path
 import re
 from tqdm import tqdm
 
@@ -8,6 +9,7 @@ from models.llm_dataset import (
     LLM1DatasetRow,
     LLM2DatasetRow,
     LLM3DatasetRow,
+    LLMType,
     Question,
     QuestionSplit,
     StepsInput,
@@ -161,6 +163,6 @@ class DatasetTranslator(Translator):
             LLMDatasetWithTypes: The translated dataset.
         """
         return LLMDatasetWithTypes(
-            rows=[self.translate_row(row, workers=workers) for row in tqdm(dataset.rows)]
+            rows=[self.translate_row(row, workers=workers) for row in dataset.rows]
         )
     

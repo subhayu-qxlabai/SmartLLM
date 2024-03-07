@@ -125,6 +125,18 @@ class FaissDB:
         self.vectorstore = None
         if write_to_disk:
             self.save()
+    
+    def delete_docs_by_page_content(self, docs: list[str|Document]) -> bool:
+        page_contents = [x for x in docs if isinstance(x, str)]
+        docs = [x for x in docs if isinstance(x, Document)]
+        searched_docs = [self.similarity_search(x, k=1)[0] for x in page_contents]
+        docs += searched_docs
+        del searched_docs, page_contents
+        doc_ids = [
+            x for x in self.vectorstore.index_to_docstore_id.values()
+            if self.vectorstore.docstore.search(x) in docs
+        ]
+        return self.vectorstore.delete(doc_ids)
 
     @property
     def total_documents(self):

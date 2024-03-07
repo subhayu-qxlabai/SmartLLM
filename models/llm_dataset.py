@@ -5,6 +5,7 @@ from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, Field, root_validator
 from datasets import Dataset
+from tqdm import tqdm
 
 from helpers.utils import get_timestamp_uid, try_json_loads
 from models.inputs import StepsInput
@@ -42,6 +43,17 @@ class LLMType(str, Enum):
     LLM1 = "llm1"
     LLM2 = "llm2"
     LLM3 = "llm3"
+
+    @classmethod
+    def from_substr(cls, s: str, none_on_fail: bool = True):
+        name = ([x.name for x in cls if s.find(x.name) != -1] or [None])[0]
+        value = ([x.value for x in cls if s.find(x.value) != -1] or [None])[0]
+        if name:
+            return cls[name]
+        if value:
+            return cls(value)
+        if not none_on_fail:
+            raise ValueError(f"Failed to find LLMType from string: {s}")
 
 
 class DatasetRow(BaseModel):
@@ -250,7 +262,7 @@ class LLMDatasetBase(BaseModel):
                     output=x.output
                 ) for x in messages
             ]
-        return cls(rows=[x for x in rows if None not in [x, x.input, x.output]])
+        return cls(rows=[x for x in rows if None not in [x, getattr(x, "input", None), getattr(x, "output", None)]])
 
     @classmethod
     def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
@@ -258,14 +270,16 @@ class LLMDatasetBase(BaseModel):
     
     @classmethod
     def from_jsonl(cls, jsonl_file: str | Path, llm_type: LLMType, strict: bool = False):
-        d = cls.from_dataset(Dataset.from_json(jsonl_file), llm_type, strict)
+        if llm_type is None:
+            llm_type = LLMType.from_substr(jsonl_file.stem, none_on_fail=False)
+        d = cls.from_dataset(Dataset.from_json(str(jsonl_file)), llm_type, strict)
         return d
 
     def page(self, page_size: int = 10, offset: int = 0):
         return self.__class__(rows=self.rows[offset:offset+page_size])
     
     def page_iterator(self, page_size: int = 10, offset: int = 0):
-        for i in range(offset, len(self.rows), page_size):
+        for i in tqdm(range(offset, len(self.rows), page_size)):
             yield self.__class__(rows=self.rows[i:i+page_size])
 
     def __repr__(self) -> str:
@@ -290,7 +304,7 @@ class LLMDatasetBase(BaseModel):
         return self.__class__(rows=self.rows + other.rows).fill_systems().unique()
 
 class LLMDatasetWithTypes(LLMDatasetBase):
-    rows: list[DatasetRow|LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []
+    rows: list[LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []
 
 class LLMDataset(LLMDatasetBase):
     rows: list[DatasetRow] = []
