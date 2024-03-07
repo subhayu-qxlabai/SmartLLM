@@ -270,9 +270,11 @@ class LLMDatasetBase(BaseModel):
     
     @classmethod
     def from_jsonl(cls, jsonl_file: str | Path, llm_type: LLMType = None, strict: bool = False):
+        jsonl_file = Path(jsonl_file)
+        assert jsonl_file.exists(), f"File {jsonl_file!r} does not exist"
         if llm_type is None:
-            llm_type = LLMType.from_substr(jsonl_file.stem, none_on_fail=False)
-        d = cls.from_dataset(Dataset.from_json(str(jsonl_file)), llm_type, strict)
+            llm_type = LLMType.from_substr(jsonl_file.as_posix(), none_on_fail=False)
+        d = cls.from_dataset(Dataset.from_json(jsonl_file.as_posix()), llm_type, strict)
         return d
 
     def page(self, page_size: int = 10, offset: int = 0):
