@@ -279,7 +279,7 @@ def translate_dataset(
         4, "--workers", "-w", min=1, help="Number of parallel workers to use for internal processing (inside each row)"
     ),
     page_size: int = typer.Option(
-        None, "--page-size", "-p", min=1, help="Now of rows to take"
+        None, "--page-size", "-p", min=1, help="Number of rows to take"
     ),
 ):
     if not language.lower() in DatasetTranslator.supported_languages:
@@ -306,7 +306,7 @@ def translate_dataset(
     dt = DatasetTranslator(language)
     
     def translate_and_dump(_dataset: LLMDatasetWithTypes):
-        for _d in _dataset.page_iterator(1):
+        for _d in _dataset.page_iterator(1, use_tqdm=False):
             dump_file.open("a").write(
                 dt
                 .translate_dataset(_d, workers)
@@ -315,7 +315,7 @@ def translate_dataset(
                 .model_dump_json() + "\n"
             )
     
-    typer.echo(f"Running {parallel_rows} rows in parallel")
+    typer.echo(f"Running {parallel_rows} row(s) in parallel")
     for d in dataset.page_iterator(page_size=parallel_rows):
         run_parallel_exec_but_return_in_order(
             translate_and_dump, 
