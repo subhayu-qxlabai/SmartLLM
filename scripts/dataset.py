@@ -1,9 +1,10 @@
+import os
 from enum import Enum
 from pathlib import Path
 from random import shuffle
 
 import typer
-from datasets import Dataset
+from datasets import Dataset, DatasetDict, load_dataset
 
 from translators import DatasetTranslator
 from helpers.utils import run_parallel_exec_but_return_in_order, try_json_load, get_ts_filename
@@ -149,14 +150,14 @@ def to_file(
     file_prefix: str = typer.Option(
         "dataset", "--file-prefix", "-p", help="Prefix of the output file(s)"
     ),
-    add_timestamp: bool = typer.Option(
+    add_ts: bool = typer.Option(
         False, help="Add timestamp suffix to the file name"
     ),
     quiet: bool = typer.Option(False, help="Don't print verbose messages"),
 ):
     dump_dir: Path = Path(dump_dir)
     suffix = (
-        get_ts_filename(".json", add_random=False).name if add_timestamp else ".json"
+        get_ts_filename(".json", add_random=False).name if add_ts else ".json"
     )
     dataset_map = get_dataset_map(source_dir, quiet, split_by_llm, validate_schema)
     file_prefix = f"{file_prefix}_" if file_prefix else ""
@@ -215,14 +216,14 @@ def to_conversations(
     file_prefix: str = typer.Option(
         "conv", "--file-prefix", "-p", help="Prefix of the output file(s)"
     ),
-    add_timestamp: bool = typer.Option(
+    add_ts: bool = typer.Option(
         False, help="Add timestamp suffix to the file name"
     ),
     quiet: bool = typer.Option(False, help="Don't print verbose messages"),
 ):
     dump_dir: Path = Path(dump_dir)
     suffix = (
-        get_ts_filename(".jsonl", add_random=False).name if add_timestamp else ".jsonl"
+        get_ts_filename(".jsonl", add_random=False).name if add_ts else ".jsonl"
     )
     dataset_map = get_dataset_map(source, quiet, split_by_llm, validate_schema)
     for _type, dataset in dataset_map.items():
@@ -253,7 +254,51 @@ def to_conversations(
             else None
         )
         conv_dataset.to_json(dump_dir / filename)
+        
 
+@app.command(name="download", help="Download dataset from Hugging Face")
+def download_dataset(
+    dump_dir: str = typer.Argument(
+        Path("dataset"), help="Directory to dump the dataset in"
+    ),
+    path: str = typer.Option(
+        "subhayu-qxlabai/SmartLLM",
+        "--path",
+        "-p",
+        help="Path to the dataset on Hugging Face"
+    ),
+    add_ts: bool = typer.Option(
+        False, help="Add timestamp suffix to the file name"
+    ),
+):
+    hf_token = os.getenv("HF_TOKEN")
+    if hf_token:
+        typer.echo(f"Using HF_TOKEN from environment variable")
+    if not hf_token or not hf_token.startswith("hf_"):
+        hf_token: str = typer.prompt("Enter your Hugging Face token", hide_input=True, value_proc=str)
+    
+    dataset = load_dataset(path, token=hf_token)
+    
+    dump_dir: Path = Path(dump_dir)
+    dump_dir.mkdir(parents=True, exist_ok=True)
+    
+    def dump_if_missing(dst: Dataset, path: Path):
+        if add_ts:
+            path = path.with_name(get_ts_filename(path.name, add_random=False).name)
+        if path.exists():
+            typer.echo(f"Dataset already exists at {path!r}! Skipping...")
+            return
+        typer.echo(f"Dumping dataset to {path!r}")
+        dst.to_json(path)
+    
+    if isinstance(dataset, DatasetDict):
+        for s, d in dataset.items():
+            file_name: Path = dump_dir / f"{s}.jsonl"
+            dump_if_missing(d, file_name)
+    elif isinstance(dataset, Dataset):
+        file_name = dump_dir / f'{typer.prompt("Enter file name for the dataset", value_proc=str)}.jsonl'
+        dump_if_missing(dataset, file_name)
+    
 
 @app.command(name="translate", help="Translate dataset")
 def translate_dataset(

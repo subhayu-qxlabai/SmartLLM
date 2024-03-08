@@ -111,6 +111,7 @@ class DatasetTranslator(Translator):
         return run_parallel_exec_but_return_in_order(
             self.translate, data_list, internal_workers, max_workers=workers
         )
+    
     def translate_row(self, row: LLM1DatasetRow | LLM2DatasetRow | LLM3DatasetRow, workers: int = 4):
         """
         Translate a given dataset row and return the translated row.
