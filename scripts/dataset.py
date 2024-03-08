@@ -267,6 +267,10 @@ def download_dataset(
         "-p",
         help="Path to the dataset on Hugging Face"
     ),
+    force: bool = typer.Option(
+        False, 
+        help="Force download even if dataset already exists"
+    ),
     add_ts: bool = typer.Option(
         False, help="Add timestamp suffix to the file name"
     ),
@@ -285,7 +289,7 @@ def download_dataset(
     def dump_if_missing(dst: Dataset, path: Path):
         if add_ts:
             path = path.with_name(get_ts_filename(path.name, add_random=False).name)
-        if path.exists():
+        if path.exists() and not force:
             typer.echo(f"Dataset already exists at {path!r}! Skipping...")
             return
         typer.echo(f"Dumping dataset to {path!r}")
