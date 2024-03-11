@@ -5,12 +5,24 @@ from random import choice
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from models.extractor import ExtractorInput
+from helpers.text_utils import TextUtils
 
 
-MODEL_PATH = "/workspace/zephyr_llm3_7k1000epochs_4batchsize_lr1e-05/checkpoint-200"
+# MODEL_PATH = "/workspace/axolotl/examples/mistral/Mistral-7b-example/out_llm3/checkpoint-432"
 
-finetuned_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map="auto")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+# model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map='auto', use_cache=False)
+# tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1", device_map='auto')
+
+from huggingface_hub import login
+login(token="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")
+
+print("------------Loading LLM3-----------")
+
+finetuned_model = AutoModelForCausalLM.from_pretrained("Divyanshu04/LLM3", device_map='auto', use_cache=False)
+tokenizer = AutoTokenizer.from_pretrained("Divyanshu04/LLM3", device_map='auto')
+
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
 
 system_messages = [
     "As an extractor, your mission entails processing JSON input composed of 'schema' and 'context' segments. Your objective is to skillfully derive pertinent data in accordance with the given schema and contextual hints. Create an output JSON that carries the key-value pairs you've extracted. Your expertise should span across diverse input designs, echoing the proficiency demonstrated in examples with varied schema and context combinations.",
@@ -62,16 +74,19 @@ def get_llm_response(prompt):
     return decoded_output[0]
 
 def extract_contexts(ext_input: ExtractorInput):
+    # print(ext_input)
     prompt = get_prompt(ext_input.model_dump_json())
+    # print(f"{prompt=}")
     response = get_llm_response(prompt)
-    assistant_response: list[str] = re.findall(r"<\|assistant\|>\n?(.*)(?:</s>)", response, flags=re.DOTALL)
-    if assistant_response:
-        response = assistant_response[0]
+    # response: list[str] = TextUtils.get_middle_text(response, prompt, tokenizer.eos_token)
+    # print(f"{response=}")
+    # print(f"{assistant_response=}")
+    if response:
         try:
             return json.loads(response)
         except Exception as e:
             print(f"Got error: {e}")
-            return {x.name: response for x in ext_input.schema}
+            return {x.name: response for x in ext_input.eschema}
     else:
         return {x.name: response for x in ext_input.schema}
 

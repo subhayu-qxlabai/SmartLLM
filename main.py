@@ -11,14 +11,14 @@ from models.outputs import StepsOutput
 from step_runner import StepRunner
 from infer.generic import ask_llm
 from infer.steps_generator import get_steps
-from infer.question_breaker import break_question
 from helpers.middleware import ProcessTimeMiddleware
 from helpers.utils import get_ts_filename, remove_special_chars
+from pathlib import Path
 
 app = FastAPI()
 app.add_middleware(ProcessTimeMiddleware)
 
-vdb = FaissDB(filename="custom_funcs.pkl")
+vdb = FaissDB(filename="functions2.pkl")
 
 unanswered_regex = re.compile(
     r"(as\s*of\s*my\s*last|as\s*of\s*my\s*current|last\s*knowledge|knowledge.*\d{4})", 
@@ -39,10 +39,9 @@ class OutModel(BaseModel):
 @app.post("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
     split: QuestionSplit = break_question(question)
-    print(f"{split=}\n")
+    # print(f"{split=}\n")
 
     if not isinstance(split, QuestionSplit):
-        print(split)
         raise HTTPException(status_code=400, detail="Failed to split the question")
 
     if split.can_i_answer:
@@ -56,14 +55,13 @@ async def process_question(question: str = Query(..., title="User Question")):
     
     function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split.tasks+[question, "llm"]]))
     functions = set([Function.model_validate(doc.metadata) for doc in function_docs])
-    print(f"{functions=}\n")
+    # print(f"{functions=}\n")
     input_schema = StepsInput(query=split.question, steps=split.tasks, functions=functions)
     
     step_output: StepsOutput = get_steps(input_schema)
     print(f"{step_output=}\n")
 
     if not isinstance(step_output, StepsOutput):
-        print(step_output)
         raise HTTPException(status_code=400, detail="Failed to generate steps")
 
     runner = StepRunner(question, step_output.steps)
@@ -77,7 +75,8 @@ async def process_question(question: str = Query(..., title="User Question")):
         context_dict=runner.context_dict, 
         response=list(list(runner.context_dict.values())[-1].get("function", {"": {"output": ""}}).values())[-1]['output'],
     )
-    filepath = f"run_logs/{remove_special_chars(question.lower())}.json"
+    filepath = Path(f"run_logs/{remove_special_chars(question.lower())}.json")
+    filepath.mkdir(parents=True,exist_ok=True)
     with open(get_ts_filename(filepath), "w") as f:
         f.write(response.model_dump_json(indent=4))
     return response
@@ -86,4 +85,4 @@ async def process_question(question: str = Query(..., title="User Question")):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)

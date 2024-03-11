@@ -50,7 +50,7 @@ class ExtractSchemaEntry(BaseModel):
 
 class ExtractEntryBase(BaseModel):
     id: str
-    eschema: List[ExtractSchemaEntry] = Field(alias="schema")
+    eschema: List[ExtractSchemaEntry] = Field(default=[],alias="schema")
 
 
 class ExtractEntry(ExtractEntryBase):

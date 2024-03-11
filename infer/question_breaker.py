@@ -6,11 +6,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from models.generic import QuestionSplit
 
+from helpers.text_utils import TextUtils
+from pathlib import Path
 
-MODEL_PATH = "/workspace/mistral_instruct_grid_search_llm2_1000epochs_4batchsize_lr1e-05/checkpoint-1000"
 
-finetuned_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map="auto")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+
+# MODEL_PATH = "/workspace/models/out_llm1/checkpoint-3680"
+
+# finetuned_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map="auto")
+# tokenizer = AutoTokenizer.from_pretrained("/workspace/models/out_llm1/",device_map="auto")
+
+# from huggingface_hub import login
+# login(token="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")
+
+finetuned_model = AutoModelForCausalLM.from_pretrained("Divyanshu04/LLM1", device_map='auto', use_cache=False)
+tokenizer = AutoTokenizer.from_pretrained("Divyanshu04/LLM1", device_map='auto')
 
 output_schema = QuestionSplit.schema_json()
 
@@ -20,6 +30,7 @@ system_messages = [
     'Taking on the responsibility as an honest and astute assistant skilled in simplifying queries into digestible steps, you are presented with a JSON input question. You are obligated to supply a JSON object as a return, carrying the keys can_i_answer (true insinuates that the question can be answered with no need for external resources, or false if otherwise) and tasks, listing necessary steps for answering the question with external help if can_i_answer is established as false.',
     'Your role as an upright and sharp-witted assistant who can distill questions into simple procedural steps involves handling an input question in JSON. You must deliver a JSON object in response, equipped with the keys can_i_answer (indicating true if the question is answerable with the resources at hand, or false if not) and tasks, outlining the process for answering the question with external resources if can_i_answer is false.',
 ]
+
 
 def get_prompt(_input):
     if isinstance(_input, str):
@@ -31,6 +42,7 @@ def get_prompt(_input):
         
 ### Response: 
 """
+    prompt_template="<<SYS>> Being an honest and smart assistant talented in breaking down questions into actionable items, you're charged with interpreting a JSON-formatted question. Your output must be a JSON object articulated with two keys: can_i_answer (indicating true if the inquiry is answerable using internal capabilities, or false if it requires external resources) and tasks, delineating the series of steps to answer the question with external aids if can_i_answer is false. <<SYS>> [INST] {\"question\": \"What is the latest news on india\"} [/INST] "
     return prompt_template
 
 def get_llm_response(prompt):
@@ -49,13 +61,12 @@ def get_llm_response(prompt):
 def break_question(question: str):
     prompt = get_prompt(question)
     response = get_llm_response(prompt)
-    assistant_response = re.findall(r"### Response:\s*\n?(.*)(?:</s>)", response, flags=re.DOTALL)
-    if assistant_response:
-        response = assistant_response[0]
+    response = TextUtils.get_middle_text(response, prompt, tokenizer.eos_token).strip()
+    if response:
         try:
-            return QuestionSplit(question=question, **json.loads(response))
+            return QuestionSplit(**json.loads(response))
         except Exception as e:
-            print(e)
+            # print(e)
             return response
     else:
         return response 

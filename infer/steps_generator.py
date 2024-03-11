@@ -5,12 +5,19 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from models.inputs import StepsInput
 from models.outputs import StepsOutput
+from helpers.text_utils import TextUtils
 
 
-MODEL_PATH = "/workspace/mistral_instruct_grid_search_1000epochs_4batchsize_lr1e-05/checkpoint-600"
+MODEL_PATH = "/workspace/models/out_llm1/checkpoint-3680"
 
-finetuned_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map="auto")
-tokenizer = AutoTokenizer.from_pretrained("/workspace/axolotl/examples/mistral/Mistral-7b-example/axolotl/src/out_llm2")
+from huggingface_hub import login
+login(token="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")
+
+
+print("------------Loading LLM2-----------")
+finetuned_model = AutoModelForCausalLM.from_pretrained("Divyanshu04/LLM2", device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained("Divyanshu04/LLM2")
+
 
 
 def get_prompt(inp_data):
@@ -43,19 +50,23 @@ def get_llm_response(prompt):
 
 def get_steps(steps_input: StepsInput):
     prompt = get_prompt(steps_input.model_dump_json())
+    # print(f"{prompt=}")
     response = get_llm_response(prompt)
-    assistant_response = re.findall(r"<\|assistant\|>\n?(.*)(?:</s>)", response, flags=re.DOTALL)
-    if assistant_response:
-        response = assistant_response[0]
+    # assistant_response = re.findall(r"<\|assistant\|>\n?(.*)(?:</s>)", response, flags=re.DOTALL)
+    response = TextUtils.get_middle_text(response, prompt, tokenizer.eos_token).strip()
+    if response:
         try:
-            return StepsOutput.model_validate_json(response)
+            # print({**json.loads(response)})
+            # return StepsOutput.model_validate_json(response)
+            return StepsOutput(**json.loads(response))
         except Exception as e:
             print(e)
-            try:
-                return StepsOutput.model_validate_json(json.loads(response))
-            except Exception as e:
-                print(e)
+            # try:
+                # return StepsOutput.model_validate_json(json.loads(response))
             return response
+            # except Exception as e:
+            #     print(e)
+            # return response
     else:
         return response 
 

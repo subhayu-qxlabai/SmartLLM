@@ -1,5 +1,5 @@
 from typing import Any
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 
 
 class ExtractSchemaEntry(BaseModel):
@@ -8,6 +8,6 @@ class ExtractSchemaEntry(BaseModel):
     description: str
 
 class ExtractorInput(BaseModel):
-    schema: list[ExtractSchemaEntry]
+    eschema: list[ExtractSchemaEntry] = Field([], alias="schema")
     context: list[Any]
 

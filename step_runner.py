@@ -3,12 +3,14 @@ import json
 import pickle
 from typing import Any
 from random import randint
+from functools import partial
 
 from helpers.utils import get_nested_value, set_nested_value
 from models.outputs import StepsOutput, Step, ExtractEntry
 from models.extractor import ExtractorInput
 from helpers.call_openai import call_openai_api
 from infer.extractor import extract_contexts
+import apis_scripts
 
 
 class StepRunner:
@@ -28,7 +30,7 @@ class StepRunner:
         )
         return is_format_fn
 
-    def _generate_func_output(self, name: str, param_dict: dict):
+    def _generate_func_output(self, name: str, **param_dict):
         if self.is_format_fn(name):
             messages = [
                 {
@@ -114,10 +116,18 @@ class StepRunner:
         # func=getattr(load_step_outputs,"create_function_dict_for_every_steps") #this will be used if the function is defined in the different module
         # func=globals()[name] #this will be used if the function is defined in the same module
         # res=func(**dict) # run the function
-        res = self._generate_func_output(
-            name, param_dict
-        )  # TODO: remove this afterwards
-        return res
+        # res = self._generate_func_output(
+        #     name, param_dict
+        # )  # TODO: remove this afterwards
+
+        # func=globals()[name](**params_dict)
+        default_func=partial(self._generate_func_output,name)
+        # func=getattr(apis_scripts,name,default_func)(**param_dict)
+        func=getattr(apis_scripts,name,default_func)(**param_dict)
+
+        # print(f"{func=}")
+        
+        return func
 
     def extract_data(self, _e: ExtractEntry):
         e = _e.model_dump(mode="json")
@@ -149,6 +159,7 @@ class StepRunner:
             )
 
     def run_steps(self):
+        # print(f"{self.steps=}")
         for step in self.steps:
             step_dump = step.model_dump(mode="json")
             funcs_cxts = self.step_extract_pattern.findall(str(step_dump["function"]))
