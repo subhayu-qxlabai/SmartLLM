@@ -43,5 +43,6 @@ class AlpacaFormatter(MessagesFormatter):
                 for key in self._keys if key in m
             ]
             for m in messages 
-            if m.get(self.user_key) and m.get(self.assistant_key)
+            if m.get(self.user_key) or m.get(self.system_key)
         ]
+    
