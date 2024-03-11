@@ -326,8 +326,11 @@ class LLMDataset(LLMDatasetBase):
             )
             for row in dataset.rows
         ]
-        llmdt = LLMDatasetWithTypes(rows=[row for row in rows if row is not None])
-        del rows
-        llmdt.rows =  [row for row in llmdt.rows if None not in [row, row.input, row.output]]
+        rows = [row for row in rows if row is not None]
+        llmdt = LLMDatasetWithTypes(rows=[
+            row for row in rows 
+            if isinstance(row, (LLM1DatasetRow, LLM2DatasetRow, LLM3DatasetRow)) 
+            and None not in [row.input, row.output]
+        ])
         return llmdt
         
