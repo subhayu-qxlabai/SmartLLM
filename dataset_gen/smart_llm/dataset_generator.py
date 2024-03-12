@@ -47,6 +47,9 @@ class DatasetGenerator:
         """
         self.dump_dir = Path(dump_dir)
         self.generated_topics_path = self.dump_dir / generated_topics_file
+        if not self.generated_topics_path.exists():
+            self.generated_topics_path.parent.mkdir(parents=True, exist_ok=True)
+            self.generated_topics_path.touch(exist_ok=True)
         self.verbose = verbose
         self.dataset = LLMDataset()
         self.dump_rows = dump_rows
