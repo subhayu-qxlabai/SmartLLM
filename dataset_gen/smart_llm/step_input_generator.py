@@ -1,11 +1,11 @@
 from pathlib import Path
 from random import choice
 from itertools import chain
+from unittest.mock import MagicMock
 
 try:
     from sentence_transformers import SentenceTransformer
 except:
-    from unittest.mock import MagicMock
     SentenceTransformer = MagicMock
 
 from helpers.vectorstore.faisser import FaissDB
@@ -80,7 +80,7 @@ class StepInputGenerator(BaseModelValidator):
                     for tsk in split.tasks + [split.question]
                 ]
             )
-        ) + self._search_task(choice(format_func_names), k=1, by_vector=by_vector)
+        ) + self._search_task(format_func_names[0], k=1, by_vector=by_vector)
         unique_functions = {
             doc.page_content: Function(**doc.metadata) for doc, score in function_docs
         }

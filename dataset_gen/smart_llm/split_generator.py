@@ -36,22 +36,7 @@ class QuestionSplitGenerator(JSONArrayGenerator):
                             "question": "Which restaurants near me have the highest ratings?"
                         },
                         {
-                            "question": "Provide workout routines for effective weight loss in a month."
-                        },
-                        {
-                            "question": "Predict the stock price of Tesla Inc. in the next month."
-                        },
-                        {
-                            "question": "How can I troubleshoot the blue screen of death on my Dell laptop?"
-                        },
-                        {
-                            "question": "Find the nearest coffee shop from my current location."
-                        },
-                        {
-                            "question": "What is the average income for software engineers in San Francisco?"
-                        },
-                        {
-                            "question": "What are the must-visit tourist attractions near my current location?"
+                            "question": "विभिन्न संस्कृतियों में एक धर्मपिता के जिम्मेदारियां और अपेक्षाएं क्या हैं?"
                         },
                         {
                             "question": "What are the ratings of Inception and Interstellar?"
@@ -77,35 +62,12 @@ class QuestionSplitGenerator(JSONArrayGenerator):
                             "can_i_answer": False,
                         },
                         {
-                            "question": "Provide workout routines for effective weight loss in a month.",
-                            "tasks": [],
-                            "can_i_answer": True,
-                        },
-                        {
-                            "question": "How can I troubleshoot the blue screen of death on my Dell laptop?",
-                            "tasks": [],
-                            "can_i_answer": True,
-                        },
-                        {
-                            "question": "Find the nearest coffee shop from my current location.",
+                            "question": "विभिन्न संस्कृतियों में एक धर्मपिता के जिम्मेदारियां और अपेक्षाएं क्या हैं?",
                             "tasks": [
-                                "LOCATE: Determine the user's current location",
-                                "MAPS: Locate the nearest coffee shop",
+                                "RESEARCH: Look up the cultural significance and role of a godfather in various cultures",
+                                "COMPARE: Outline the differences and similarities in the responsibilities and expectations across these cultures"
                             ],
-                            "can_i_answer": False,
-                        },
-                        {
-                            "question": "What is the average income for software engineers in San Francisco?",
-                            "tasks": [],
-                            "can_i_answer": True,
-                        },
-                        {
-                            "question": "What are the must-visit tourist attractions near my current location?",
-                            "tasks": [
-                                "LOCATE: Identify the user's location",
-                                "MAPS: Find must-visit tourist attractions near the user's location",
-                            ],
-                            "can_i_answer": False,
+                            "can_i_answer": False
                         },
                         {
                             "question": "What are the ratings of Inception and Interstellar?",
@@ -124,8 +86,14 @@ class QuestionSplitGenerator(JSONArrayGenerator):
                 "content": json.dumps(
                     [
                         {
-                            "question": "What are the latest advancements in renewable energy in the country that consumes the most oil?"
-                        }
+                            "question": "पिछले दशक में समुद्र के जल स्तर में वृद्धि की दर में कैसे परिवर्तन आया है?"
+                        },
+                        {
+                            "question": "Provide workout routines for effective weight loss in a month."
+                        },
+                        {
+                            "question": "मैं किशोर के रूप में एक संबंध में संचार समस्याओं को कैसे संबोधित करूँ?"
+                        },
                     ]
                 ),
             },
@@ -134,13 +102,23 @@ class QuestionSplitGenerator(JSONArrayGenerator):
                 "content": json.dumps(
                     [
                         {
-                            "question": "What are the latest advancements in renewable energy in the country that consumes the most oil?",
+                            "question": "पिछले दशक में समुद्र के जल स्तर में वृद्धि की दर में कैसे परिवर्तन आया है?",
                             "tasks": [
-                                "IDENTIFY: Determine the country that consumes the most oil",
-                                "SEARCH: Research the latest advancements in renewable energy in that country",
+                                "RESEARCH: Locate scientific data on sea level measurements over the last decade",
+                                "ANALYZE: Compare the rate of change in sea level rise from the beginning to the end of the decade"
                             ],
-                            "can_i_answer": False,
-                        }
+                            "can_i_answer": False
+                        },
+                        {
+                            "question": "Provide workout routines for effective weight loss in a month.",
+                            "tasks": [],
+                            "can_i_answer": True,
+                        },
+                        {
+                            "question": "मैं किशोर के रूप में एक संबंध में संचार समस्याओं को कैसे संबोधित करूँ?",
+                            "tasks": [],
+                            "can_i_answer": True
+                        },
                     ]
                 ),
             },

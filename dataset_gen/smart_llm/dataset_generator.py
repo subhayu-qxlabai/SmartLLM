@@ -72,11 +72,12 @@ class DatasetGenerator:
                 if self.verbose:
                     print(f"Error: {e}")
 
-    def _generate_rows(self, topic: str, n=1):
+    def _generate_rows(self, topic: str, n=1, language: str = "english"):
         questions = self._retry(
             QuestionGenerator(verbose=self.verbose).generate,
             topic,
-            n,
+            n=n,
+            language=language,
             dump=self.dump_internal,
         )
         splits = self._retry(
@@ -151,12 +152,13 @@ class DatasetGenerator:
         existing_topics = self._load_generated_topics()
         return topic not in existing_topics
 
-    def generate(self, topic: str, multiplier=1) -> list[DatasetRow]:
+    def generate(self, topic: str, language: str = "english", multiplier=1) -> list[DatasetRow]:
         """
         Generates dataset rows for a given topic.
 
         Args:
             topic (str): The topic for which to generate dataset rows.
+            language (str): The language of the dataset rows.
             multiplier (int): The number of dataset rows to generate for the topic. Default is 1.
 
         Returns:
@@ -168,7 +170,7 @@ class DatasetGenerator:
             return []
         print(f"Generating for topic: {topic}")
         self._add_generated_topic(topic)
-        generated = self._generate_rows(topic, multiplier)
+        generated = self._generate_rows(topic, multiplier, language)
         rows: list[DatasetRow] = list(
             chain(*[self._map_generated(x) for x in generated])
         )
@@ -181,6 +183,7 @@ class DatasetGenerator:
     def generate_parallel(
         self,
         topics: list[str],
+        language: str = "english",
         multiplier=1,
         workers=4,
         parallelism: Literal["thread", "process"] = "thread",
@@ -190,6 +193,7 @@ class DatasetGenerator:
 
         Args:
             topics (list[str]): List of topics to generate results for.
+            language (str): Language of the generated results.
             multiplier (int): Multiplier to apply to the generated results.
             workers (int): Number of parallel workers to use.
             parallelism (Literal["thread", "process"], optional): Use multiprocessing or multithreading.
@@ -199,22 +203,33 @@ class DatasetGenerator:
         """
         if parallelism == "thread":
             generated: list[list[DatasetRow]] = run_parallel_exec_but_return_in_order(
-                self.generate, topics, multiplier, max_workers=workers, quiet=not self.verbose,
+                self.generate, topics, language, multiplier, max_workers=workers, quiet=not self.verbose,
             )
         elif parallelism == "process":
             with Pool(workers) as p:
                 generated = p.starmap(
-                    self.generate, [(topic, multiplier) for topic in topics]
+                    self.generate, [(topic, language, multiplier) for topic in topics]
                 )
         else:
             raise ValueError("parallelism must be 'thread' or 'process'")
         return list(chain(*generated))
 
-    def generate_auto(self, n=5, multiplier=1, workers=4):
+    def generate_auto(self, language: str = "english", n=5, multiplier=1, workers=4):
+        """
+        Automatically generates dataset.
+        
+        Args:
+            language (str): Language of the generated results.
+            n (int): Number of topics to generate results for.
+            multiplier (int): Multiplier to apply to the generated results.
+            workers (int): Number of parallel workers to use.
+        Returns:
+            list[DatasetRow]: A list of generated results.
+        """
         topics = TopicGenerator().generate(n, dump=True)
         if self.verbose:
             print(f"Generating for topics: {topics}")
-        generated = self.generate_parallel(topics, multiplier, workers)
+        generated = self.generate_parallel(topics, language, multiplier, workers)
         return generated
 
     def dump(self):

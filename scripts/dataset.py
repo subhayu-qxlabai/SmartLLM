@@ -35,6 +35,9 @@ def generate(
         "-t",
         help="Path to the topics file. Must be a JSON array of strings.",
     ),
+    language: str = typer.Option(
+        "en", "--language", "-l", help="Language of the dataset"
+    ),
     multiplier: int = typer.Option(
         1,
         "--multiplier",
@@ -92,11 +95,11 @@ def generate(
         shuffle(topics)
         topics = topics[:generate_for]
         typer.echo(f"Generating for {generate_for} topics")
-        rows = dg.generate_parallel(topics, multiplier, workers, parallelism)
+        rows = dg.generate_parallel(topics, language, multiplier, workers, parallelism)
     else:
         generate_for = min(generate_for, 10)
         typer.echo(f"No topics found! Auto-generating for {generate_for} topics...")
-        rows = dg.generate_auto(generate_for, multiplier, workers)
+        rows = dg.generate_auto(language, generate_for, multiplier, workers)
     typer.echo(f"Generated {len(rows)} rows!")
 
 

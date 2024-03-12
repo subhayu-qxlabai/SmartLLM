@@ -21,14 +21,14 @@ class QuestionGenerator(JSONArrayGenerator):
         system_prompt = system_prompt or (
             "You are an excellent question generator. \n"
             "You have to generate question that can be asked on a search engine to get latest data. \n\n"
-            "You will have to generate n random question(s).\n"
+            "You will have to generate n random question(s) in a specified language.\n"
             "Your output should be a JSON array of strings."
         )
         example_messages = example_messages or [
             {
                 "role": "user",
                 "content": json.dumps(
-                    {"topic": "global warming related to date", "n": 5}
+                    {"topic": "global warming related to date", "n": 5, "language": "english"}
                 ),
             },
             {
@@ -45,13 +45,13 @@ class QuestionGenerator(JSONArrayGenerator):
             },
             {
                 "role": "user",
-                "content": json.dumps({"topic": "Steve Jobs and Pixar", "n": 1}),
+                "content": json.dumps({"topic": "Steve Jobs and Pixar", "n": 1, "language": "hindi"}),
             },
             {
                 "role": "assistant",
                 "content": json.dumps(
                     [
-                        "What was the name of the animation studio that Steve Jobs purchased and later became Pixar?",
+                        "कैसे स्टीव जॉब्स ने पिक्सार को एक विश्वव्यापी एनिमेशन कंपनी में बदला?",
                     ]
                 ),
             },
@@ -66,18 +66,19 @@ class QuestionGenerator(JSONArrayGenerator):
             verbose,
         )
 
-    def generate(self, topic: str, n: int = 1, dump: bool = False):
+    def generate(self, topic: str, n: int = 1, language: str = "english", dump: bool = False):
         """
         Generate questions based on the given topic, with an optional number of questions and dump parameter.
 
         Args:
             topic (str): The topic for which questions need to be generated.
             n (int, optional): The number of questions to generate, capped at 20. Defaults to 1.
+            language (str, optional): The language of the questions. Defaults to "english".
             dump (bool, optional): Whether to automatically dump the generated questions. Defaults to False.
 
         Returns:
             list[str]: The generated questions based on the topic.
         """
         n = min(n, 20)
-        last_user_message = json.dumps({"topic": topic, "n": n})
+        last_user_message = json.dumps({"topic": topic, "n": n, "language": language})
         return self.generate_and_dump(last_user_message, 1, dump)
