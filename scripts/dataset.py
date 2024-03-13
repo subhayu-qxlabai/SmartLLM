@@ -90,7 +90,11 @@ def generate(
     )
     topics: list[str] = []
     if topics_file and topics_file.exists():
-        topics: list[str] = try_json_load(topics_file, [])
+        if topics_file.suffix == ".json":
+            topics: list[str] = try_json_load(topics_file, [])
+        if topics_file.suffix == ".txt":
+            with open(topics_file, "r") as f:
+                topics = [line.strip() for line in f.readlines()]
     if topics:
         shuffle(topics)
         topics = topics[:generate_for]
