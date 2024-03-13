@@ -40,7 +40,7 @@ class StepOutputGenerator(JSONGenerator):
             },
             {
                 "role": "assistant",
-                "content": '',
+                "content": '{"overview":"To find the most popular smartphones released in the first half of 2023, we need to search through tech news and reviews to identify the top models.","steps":[{"id":"step_1","thought":"Start by searching for news articles about smartphone releases in the first half of 2023.","explore_tools":"We need a tool that can fetch the latest tech news.","available_tools":["FETCH_TECH_NEWS","POLITICS_TECH_ANALYSIS","TECH_PRODUCT_REVIEWS"],"choose_tool":"The \'FETCH_TECH_NEWS\' tool will be used to retrieve articles about new smartphone releases.","understand_dependencies":null,"extract":[],"function":[{"id":"function_1","name":"FETCH_TECH_NEWS","parameters":[{"name":"topics","value":["स्मार्टफोन्स","रिलीज़","२०२३"]},{"name":"limit","value":10}]}]},{"id":"step_2","thought":"Analyze the articles to determine which smartphones are most talked about.","explore_tools":"We need a tool that can analyze the popularity of the smartphones mentioned in the articles.","available_tools":["LARGE_LANGUAGE_MODEL","TECH_PRODUCT_REVIEWS"],"choose_tool":"We will use \'LARGE_LANGUAGE_MODEL\' to summarize and identify the most popular smartphones from the articles retrieved.","understand_dependencies":null,"extract":[],"function":[{"id":"function_2","name":"LARGE_LANGUAGE_MODEL","parameters":[{"name":"prompt","value":"निम्नलिखित टेक न्यूज़ लेखों के आधार पर: {{step_1.function.function_1}}, २०२३ के पहले छमाही में जारी किए गए सबसे लोकप्रिय स्मार्टफ़ोन की पहचान करें।"}]}]}]}',
             },
         ]
         super().__init__(
