@@ -1,5 +1,6 @@
 from typing import Any
-from pydantic import BaseModel,Field
+from pydantic import Field
+from models.base import CustomBaseModel as BaseModel
 
 
 class ExtractSchemaEntry(BaseModel):

@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from models.base import CustomBaseModel as BaseModel
+
 
 class Question(BaseModel):
     question: str

@@ -6,8 +6,9 @@ from random import choice
 from functools import partial
 
 from datasets import Dataset
-from pydantic import BaseModel, root_validator
+from pydantic import root_validator
 
+from models.base import CustomBaseModel as BaseModel
 from helpers.formatter import MessagesFormatter
 
 

@@ -1,7 +1,8 @@
 import re
 from typing import List, Optional
+from pydantic import Field, root_validator
 
-from pydantic import BaseModel, Field, root_validator
+from models.base import CustomBaseModel as BaseModel
 
 
 step_and_func_id = re.compile(r"step_([0-9]+)\.(\w+)\.(\w+_[0-9]+)")
@@ -38,7 +39,15 @@ class FunctionEntry(BaseModel):
 
     @root_validator(pre=True)
     def validate_parameters(cls, values):
-        values["parameters"] = [x for x in values.get("parameters") if (x.get("value") if isinstance(x, dict) else x.value if hasattr(x, "value") else x)]
+        values["parameters"] = [
+            x
+            for x in values.get("parameters")
+            if (
+                x.get("value")
+                if isinstance(x, dict)
+                else x.value if hasattr(x, "value") else x
+            )
+        ]
         return values
 
 
@@ -50,7 +59,7 @@ class ExtractSchemaEntry(BaseModel):
 
 class ExtractEntryBase(BaseModel):
     id: str
-    eschema: List[ExtractSchemaEntry] = Field(default=[],alias="schema")
+    eschema: List[ExtractSchemaEntry] = Field(default_factory=list, alias="schema")
 
 
 class ExtractEntry(ExtractEntryBase):
@@ -127,7 +136,7 @@ class StepsOutput(BaseModel):
                     v for v in context_dicts.values() if isinstance(v, FunctionEntry)
                 ]
                 extract_w_func = ExtractEntryWithFunction(
-                    schema=extract.schema,
+                    schema=extract.eschema, 
                     functions=functions,
                 )
                 extracts_with_functions.append(extract_w_func)

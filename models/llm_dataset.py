@@ -3,11 +3,12 @@ import uuid
 import random
 from enum import Enum
 from pathlib import Path
-from pydantic import BaseModel, Field, root_validator
+from pydantic import Field, root_validator
 from datasets import Dataset
 from tqdm import tqdm
 
 from helpers.utils import get_timestamp_uid, try_json_loads
+from models.base import CustomBaseModel as BaseModel
 from models.inputs import StepsInput
 from models.outputs import StepsOutput
 from models.extractor import ExtractorInput
@@ -25,6 +26,7 @@ from models.messages import (
 
 
 UID_FUNCTION = lambda: get_timestamp_uid(make_uuid=True, local_timezone=True)
+UID_FUNCTION = uuid.uuid4
 DEFAULT_DATASET_DIR = Path("generated/dataset")
 
 
