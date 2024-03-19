@@ -1,3 +1,4 @@
+from itertools import chain
 import json
 import uuid
 import random
@@ -7,7 +8,7 @@ from pydantic import Field, root_validator
 from datasets import Dataset
 from tqdm import tqdm
 
-from helpers.utils import get_timestamp_uid, try_json_loads
+from helpers.utils import get_timestamp_uid, try_json_loads, run_parallel_exec
 from models.base import CustomBaseModel as BaseModel
 from models.inputs import StepsInput
 from models.outputs import StepsOutput
@@ -218,13 +219,28 @@ class LLMDatasetBase(BaseModel):
         cls, 
         file: str | Path = "all.json", 
         dir: str | Path = DEFAULT_DATASET_DIR, 
+        full_path: str | Path = None,
         log_errors = True,
     ):
-        with open(Path(dir) / file, "r") as f:
+        full_path = Path(full_path) if full_path else Path(dir) / file
+        with open(full_path, "r") as f:
             try:
                 return cls.model_validate_json(f.read())
             except Exception as e:
                 print(f"Got error: {e}") if log_errors else None
+    
+    @classmethod
+    def from_files(
+        cls, 
+        files: list[str | Path] = [],
+        dir: str | Path = DEFAULT_DATASET_DIR,
+        log_errors = True,
+    ):
+        data: list[tuple[str | Path, LLMDatasetBase]] = run_parallel_exec(
+            cls.from_file, set(files), dir, None, log_errors, quiet=not log_errors
+        )
+        data = [x[1].rows for x in data if isinstance(x[1], cls)]
+        return cls(rows=list(chain(*data)))
     
     def fill_systems(self, systems: list[str] = None):
         _systems = {x.system for x in self.rows if x.system}
@@ -309,7 +325,11 @@ class LLMDatasetBase(BaseModel):
     def __add__(self, other: "LLMDatasetBase"):
         if type(self) != type(other):
             raise NotImplementedError(f"Cannot add {type(self)} and {type(other)}")
-        return self.__class__(rows=self.rows + other.rows).fill_systems().unique()
+        _dst_merged = self.__class__(rows=self.rows + other.rows)
+        _dst = self.__class__(rows=[])
+        for llm in LLMType:
+            _dst.rows += _dst_merged.get_llm(llm).fill_systems().unique().rows
+        return _dst
 
 class LLMDatasetWithTypes(LLMDatasetBase):
     rows: list[LLM1DatasetRow|LLM2DatasetRow|LLM3DatasetRow] = []

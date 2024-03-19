@@ -3,11 +3,13 @@ from multiprocessing import Pool
 from typing import Callable, Literal
 from itertools import chain, zip_longest
 
+from dataset_gen.base.model_validator import BaseModelValidator
 from dataset_gen.smart_llm.topic_generator import TopicGenerator
 from dataset_gen.smart_llm.question_generator import QuestionGenerator
 from dataset_gen.smart_llm.split_generator import QuestionSplitGenerator
 from dataset_gen.smart_llm.step_input_generator import StepInputGenerator
 from dataset_gen.smart_llm.step_output_generator import StepOutputGenerator
+from dataset_gen.smart_llm.extract_generator import ExtractGenerator
 from helpers.utils import run_parallel_exec_but_return_in_order
 from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
@@ -17,6 +19,8 @@ from models.llm_dataset import (
     DatasetRow,
     DEFAULT_DATASET_DIR,
 )
+from models.outputs import StepsOutput
+from models.extractor import ExtractorIO
 
 DEFAULT_TOPICS_FILE = "topics.txt"
 
@@ -75,15 +79,15 @@ class DatasetGenerator:
                 if self.verbose:
                     print(f"Error: {e}")
 
-    def _generate_rows(self, topic: str, n=1, language: str = "english"):
-        questions = self._retry(
+    def _generate_rows(self, topic: str, n=1, language: str = "english") -> list[DatasetRow]:
+        questions: list[str] = self._retry(
             QuestionGenerator(verbose=self.verbose).generate,
             topic,
             n=n,
             language=language,
             dump=self.dump_internal,
         )
-        splits = self._retry(
+        splits: list[str | dict] = self._retry(
             QuestionSplitGenerator(verbose=self.verbose).generate,
             questions,
             dump=self.dump_internal,
@@ -107,7 +111,7 @@ class DatasetGenerator:
             )
             for split in split_models
         ]
-        step_outputs = [
+        step_outputs: list[str | dict | None] = [
             (
                 self._retry(
                     StepOutputGenerator(verbose=self.verbose, max_tokens=4090).generate,
@@ -121,22 +125,35 @@ class DatasetGenerator:
             )
             for step_input in step_inputs
         ]
-
-        rows: list[tuple[str | dict | None]] = list(
-            zip_longest(questions, splits, step_inputs, step_outputs, fillvalue=None)
+        so_models: list[StepsOutput] = [BaseModelValidator(
+            verbose=self.verbose
+        )._to_model(so, StepsOutput) for so in step_outputs]
+        extracts_with_functions = list(chain.from_iterable(
+            _m.get_extracts_with_functions() for _m in so_models 
+            if isinstance(_m, StepsOutput)
+        ))
+        del so_models
+        xios: list[ExtractorIO] = run_parallel_exec_but_return_in_order(
+            ExtractGenerator().generate, extracts_with_functions, language
         )
+        rows = list(chain(*[
+            [
+                DatasetRow(
+                    llm=LLMType.LLM1, input={"question": q}, output=s
+                ) for q, s in zip_longest(questions, splits, fillvalue=None)
+            ],
+            [
+                DatasetRow(
+                    llm=LLMType.LLM2, input=i, output=o
+                ) for i, o in zip_longest(step_inputs, step_outputs, fillvalue=None)
+            ],
+            [
+                DatasetRow(
+                    llm=LLMType.LLM3, input=io.input.model_dump(), output=io.output
+                ) for io in xios if isinstance(io, ExtractorIO)
+            ],
+        ]))
         return rows
-
-    @staticmethod
-    def _map_generated(generated: list[tuple[str | dict | None]]):
-        assert len(generated) == 4
-        llm1_row = DatasetRow(
-            llm=LLMType.LLM1, input={"question": generated[0]}, output=generated[1]
-        )
-        llm2_row = DatasetRow(
-            uid=llm1_row.uid, llm=LLMType.LLM2, input=generated[2], output=generated[3]
-        )
-        return [llm1_row, llm2_row]
 
     def _load_generated_topics(self) -> list[str]:
         if not self.generated_topics_path.exists():
@@ -173,10 +190,7 @@ class DatasetGenerator:
             return []
         print(f"Generating for topic: {topic}")
         self._add_generated_topic(topic)
-        generated = self._generate_rows(topic, multiplier, language)
-        rows: list[DatasetRow] = list(
-            chain(*[self._map_generated(x) for x in generated])
-        )
+        rows = self._generate_rows(topic, multiplier, language)
         if self.dump_rows:
             [row.to_file(dir=self.dump_dir) for row in rows]
         else:
