@@ -79,6 +79,7 @@ class Messages(BaseModel):
     
 
 class AlpacaMessages(BaseModel):
+    language: str = "english"
     system: str | None = None
     input: str | None = None
     output: str | None = None
@@ -108,6 +109,7 @@ class AlpacaMessages(BaseModel):
 
     def __hash__(self) -> int:
         return hash((
+            self.language,
             # self.system, 
             self.input, 
             self.output

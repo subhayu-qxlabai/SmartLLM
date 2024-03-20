@@ -139,17 +139,17 @@ class DatasetGenerator:
         rows = list(chain(*[
             [
                 DatasetRow(
-                    llm=LLMType.LLM1, input={"question": q}, output=s
+                    llm=LLMType.LLM1, language=language, input={"question": q}, output=s
                 ) for q, s in zip_longest(questions, splits, fillvalue=None)
             ],
             [
                 DatasetRow(
-                    llm=LLMType.LLM2, input=i, output=o
+                    llm=LLMType.LLM2, language=language, input=i, output=o
                 ) for i, o in zip_longest(step_inputs, step_outputs, fillvalue=None)
             ],
             [
                 DatasetRow(
-                    llm=LLMType.LLM3, input=io.input.model_dump(), output=io.output
+                    llm=LLMType.LLM3, language=language, input=io.input.model_dump(), output=io.output
                 ) for io in xios if isinstance(io, ExtractorIO)
             ],
         ]))

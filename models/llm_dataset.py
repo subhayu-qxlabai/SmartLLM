@@ -62,6 +62,7 @@ class LLMType(str, Enum):
 class DatasetRow(BaseModel):
     uid: uuid.UUID | str = Field(default_factory=UID_FUNCTION)
     llm: LLMType
+    language: str = "english"
     system: str | None = None
     input: str | dict | None = None
     output: str | dict | None = None
@@ -93,6 +94,7 @@ class DatasetRow(BaseModel):
         if self.system is None and self.input is None and self.output is None:
             return None
         return AlpacaMessages(
+            language=self.language,
             system=self.system,
             input=self.input,
             output=self.output,
@@ -111,6 +113,7 @@ class DatasetRow(BaseModel):
     def __hash__(self):
         return hash((
             # self.llm, 
+            self.language,
             # self.system, 
             str(self.input), 
             str(self.output), 
@@ -177,6 +180,10 @@ def llm_row_factory(llm_type: LLMType):
 
 class LLMDatasetBase(BaseModel):
     rows: list[DatasetRow] = []
+    
+    @property
+    def languages(self):
+        return set([row.language for row in self.rows])
 
     def to_dir(self, dir: str | Path = DEFAULT_DATASET_DIR):
         return [row.to_file(dir) for row in self.rows]
