@@ -130,15 +130,6 @@ def remove_comments(text: str) -> str:
 def clean_json_str(text: str) -> str:
     return remove_comments(remove_backticks(text))
 
-def get_ts_filename(filepath: str, add_random: bool = True):
-    filepath: Path = Path(filepath)
-    extra_suffix = f"_{str(random())[2:]}" if add_random else ""
-    filepath = (
-        filepath.parent
-        / f"{filepath.name.rsplit('.')[0]}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}{extra_suffix}.{filepath.name.rsplit('.')[-1]}"
-    )
-    return filepath
-
 def try_json_loads(text: str, default_return = []):
     try:
         return json.loads(text)
@@ -200,14 +191,46 @@ def get_json_list_from_string(s: str) -> list:
 def get_timestamp_uid(make_uuid=True, local_timezone=True):
     """Get a unique id for a timestamp. If `make_uuid` is True, an UUID will be generated from the timestamp."""
     if local_timezone:
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now()
     else:
-        timestamp = datetime.utcnow().isoformat()
-    uid = re.sub(r'[:\.\-\+TZ\s]', '', timestamp)
+        timestamp = datetime.utcnow()
+    uid = timestamp.strftime('%Y%m%d%H%M%S%f')
     if make_uuid:
         rndm = str(randrange(10 ** 11, 10 ** 12))
         uid = uuid.UUID(f'{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{rndm}')
     return uid
+
+def datetime_from_uid(uid: str|uuid.UUID):
+    if not isinstance(uid, (str, uuid.UUID)):
+        return 
+    if isinstance(uid, uuid.UUID):
+        uid = str(uid)
+    if isinstance(uid, str):
+        uid = uid.replace("-", "")[:20]
+        assert len(uid) == 20, f"Invalid UID: {uid!r}. Should be at least 20 characters long."
+        assert uid.isdigit(), f"Invalid UID: {uid!r}. Should be all digits."
+        return datetime.strptime(uid, "%Y%m%d%H%M%S%f")
+
+def get_ts_filename(filepath: str | Path, add_random: bool = True):
+    filepath: Path = Path(filepath)
+    extra_suffix = f"_{str(randrange(10 ** 11, 10 ** 12))}" if add_random else ""
+    filepath = (
+        filepath.parent
+        / f"{filepath.stem}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}{extra_suffix}{filepath.suffix}"
+    )
+    return filepath
+
+TS_FILE_STEM_REGEX = re.compile(r"(?P<stem>.+)_(?P<uid>[0-9]{20,})(?:_[0-9]+)?(?P<suffix>\.\w+)")
+
+def datetime_from_tsfile(filepath: str | Path):
+    ts = (TS_FILE_STEM_REGEX.findall(Path(filepath).name) or [(None, None)])[0][1]
+    return datetime_from_uid(ts)
+
+def parts_from_tsfile(filepath: str | Path) -> dict[str, str | datetime]:
+    match = TS_FILE_STEM_REGEX.search(Path(filepath).name)
+    if match is None:
+        return {}
+    return match.groupdict() | {"datetime": datetime_from_uid(match.group("uid"))}
 
 def convert_to_dict(val: str | dict | None) -> dict | None:
     if val is None:

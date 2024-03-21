@@ -154,9 +154,12 @@ def generate(
         typer.echo(f"Dumped dataset to file: {dump_file}")
         import socket
         if upload:
-            metadata = {"language": language, "host": socket.gethostname()}
-            s3_url = S3Client().upload_file(
+            s3_client = S3Client()
+            _host = socket.gethostname()
+            metadata = {"language": language, "host": _host}
+            s3_url = s3_client.upload_file(
                 local_path=dump_file, 
+                object_key=(dump_file.parent / f"{dump_file.stem}_{_host}{dump_file.suffix}").as_posix(),
                 metadata=metadata, 
             )
             typer.echo(f"Uploaded dataset to {s3_url!r} with metadata: {metadata}")
