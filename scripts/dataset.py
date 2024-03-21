@@ -7,7 +7,12 @@ import typer
 from datasets import Dataset, DatasetDict, load_dataset
 
 from translators import DatasetTranslator
-from helpers.utils import run_parallel_exec_but_return_in_order, try_json_load, get_ts_filename
+from helpers.storage.s3client import S3Client
+from helpers.utils import (
+    run_parallel_exec_but_return_in_order,
+    try_json_load,
+    get_ts_filename,
+)
 from dataset_gen import DatasetGenerator, DEFAULT_TOPICS_FILE
 from models.messages import ConversationFormat, messages_list_factory
 from models.llm_dataset import (
@@ -24,6 +29,53 @@ app = typer.Typer(no_args_is_help=True)
 class ParallelismType(str, Enum):
     thread = "thread"
     process = "process"
+
+
+def generate_dataset(
+    generate_for: int = 1,
+    topics_file: str = "yahoo_questions_1.4M.json",
+    language: str = "english",
+    multiplier: int = 1,
+    workers: int = 4,
+    parallelism: ParallelismType = ParallelismType.process,
+    quiet: bool = False,
+    validate: bool = False,
+    dump_rows: bool = True,
+    dump_internal: bool = False,
+    local_embeddings: bool = True,
+    dump_dir: str | Path = DEFAULT_DATASET_DIR,
+    generated_topics_file: str = DEFAULT_TOPICS_FILE,
+):
+    dump_dir: Path = Path(dump_dir)
+    dump_dir.mkdir(parents=True, exist_ok=True)
+    topics_file: Path | None = Path(topics_file) if topics_file is not None else None
+    dg = DatasetGenerator(
+        dump_dir=dump_dir,
+        generated_topics_file=generated_topics_file,
+        verbose=not quiet,
+        dump_rows=dump_rows,
+        dump_internal=dump_internal,
+        validate=validate,
+        local_embeddings=local_embeddings,
+    )
+    topics: list[str] = []
+    if topics_file and topics_file.exists():
+        if topics_file.suffix == ".json":
+            topics: list[str] = try_json_load(topics_file, [])
+        if topics_file.suffix == ".txt":
+            with open(topics_file, "r") as f:
+                topics = [line.strip() for line in f.readlines()]
+    if topics:
+        shuffle(topics)
+        topics = topics[:generate_for]
+        typer.echo(f"Generating for {generate_for} topics")
+        rows = dg.generate_parallel(topics, language, multiplier, workers, parallelism)
+    else:
+        generate_for = min(generate_for, 10)
+        typer.echo(f"No topics found! Auto-generating for {generate_for} topics...")
+        rows = dg.generate_auto(language, generate_for, multiplier, workers)
+    typer.echo(f"Generated {len(rows)} rows!")
+    return rows
 
 
 @app.command(help="Generates dataset")
@@ -74,38 +126,40 @@ def generate(
         "-gt",
         help="File to store the generated topics for hash",
     ),
+    upload: bool = typer.Option(True, help="Upload the dataset to s3"),
 ):
     assert (
         isinstance(generate_for, int) and generate_for > 0
     ), "generate_for must be greater than 0"
-    topics_file: Path | None = Path(topics_file) if topics_file is not None else None
-    dg = DatasetGenerator(
-        dump_dir=dump_dir,
-        generated_topics_file=generated_topics_file,
-        verbose=not quiet,
-        dump_rows=dump_rows,
-        dump_internal=dump_internal,
-        validate=validate,
-        local_embeddings=local_embeddings,
-    )
-    topics: list[str] = []
-    if topics_file and topics_file.exists():
-        if topics_file.suffix == ".json":
-            topics: list[str] = try_json_load(topics_file, [])
-        if topics_file.suffix == ".txt":
-            with open(topics_file, "r") as f:
-                topics = [line.strip() for line in f.readlines()]
-    if topics:
-        shuffle(topics)
-        topics = topics[:generate_for]
-        typer.echo(f"Generating for {generate_for} topics")
-        rows = dg.generate_parallel(topics, language, multiplier, workers, parallelism)
-    else:
-        generate_for = min(generate_for, 10)
-        typer.echo(f"No topics found! Auto-generating for {generate_for} topics...")
-        rows = dg.generate_auto(language, generate_for, multiplier, workers)
-    typer.echo(f"Generated {len(rows)} rows!")
-
+    try:
+        generate_dataset(
+            generate_for=generate_for,
+            topics_file=topics_file,
+            language=language,
+            multiplier=multiplier,
+            workers=workers,
+            parallelism=parallelism,
+            quiet=quiet,
+            validate=validate,
+            dump_rows=dump_rows,
+            dump_internal=dump_internal,
+            local_embeddings=local_embeddings,
+            dump_dir=dump_dir,
+            generated_topics_file=generated_topics_file,
+        )
+    finally:
+        d = LLMDataset.from_dir(dump_dir, log_errors=not quiet)
+        dump_file = Path(dump_dir).parent / get_ts_filename(f"{language}.json")
+        d.to_file(file=dump_file.name, dir=dump_file.parent)
+        typer.echo(f"Dumped dataset to file: {dump_file}")
+        import socket
+        if upload:
+            metadata = {"language": language, "host": socket.gethostname()}
+            s3_url = S3Client().upload_file(
+                local_path=dump_file, 
+                metadata=metadata, 
+            )
+            typer.echo(f"Uploaded dataset to {s3_url!r} with metadata: {metadata}")
 
 def get_dataset_map(
     source: str | Path, quiet=False, split_by_llm=True, validate_schema=True
@@ -157,15 +211,11 @@ def to_file(
     file_prefix: str = typer.Option(
         "dataset", "--file-prefix", "-p", help="Prefix of the output file(s)"
     ),
-    add_ts: bool = typer.Option(
-        False, help="Add timestamp suffix to the file name"
-    ),
+    add_ts: bool = typer.Option(False, help="Add timestamp suffix to the file name"),
     quiet: bool = typer.Option(False, help="Don't print verbose messages"),
 ):
     dump_dir: Path = Path(dump_dir)
-    suffix = (
-        get_ts_filename(".json", add_random=False).name if add_ts else ".json"
-    )
+    suffix = get_ts_filename(".json", add_random=False).name if add_ts else ".json"
     dataset_map = get_dataset_map(source_dir, quiet, split_by_llm, validate_schema)
     file_prefix = f"{file_prefix}_" if file_prefix else ""
     for _type, dataset in dataset_map.items():
@@ -223,15 +273,11 @@ def to_conversations(
     file_prefix: str = typer.Option(
         "conv", "--file-prefix", "-p", help="Prefix of the output file(s)"
     ),
-    add_ts: bool = typer.Option(
-        False, help="Add timestamp suffix to the file name"
-    ),
+    add_ts: bool = typer.Option(False, help="Add timestamp suffix to the file name"),
     quiet: bool = typer.Option(False, help="Don't print verbose messages"),
 ):
     dump_dir: Path = Path(dump_dir)
-    suffix = (
-        get_ts_filename(".jsonl", add_random=False).name if add_ts else ".jsonl"
-    )
+    suffix = get_ts_filename(".jsonl", add_random=False).name if add_ts else ".jsonl"
     dataset_map = get_dataset_map(source, quiet, split_by_llm, validate_schema)
     for _type, dataset in dataset_map.items():
         conv_list = dataset.to_messages(conv_format)
@@ -261,7 +307,7 @@ def to_conversations(
             else None
         )
         conv_dataset.to_json(dump_dir / filename)
-        
+
 
 @app.command(name="download", help="Download dataset from Hugging Face")
 def download_dataset(
@@ -272,27 +318,26 @@ def download_dataset(
         "subhayu-qxlabai/SmartLLM",
         "--path",
         "-p",
-        help="Path to the dataset on Hugging Face"
+        help="Path to the dataset on Hugging Face",
     ),
     force: bool = typer.Option(
-        False, 
-        help="Force download even if dataset already exists"
+        False, help="Force download even if dataset already exists"
     ),
-    add_ts: bool = typer.Option(
-        False, help="Add timestamp suffix to the file name"
-    ),
+    add_ts: bool = typer.Option(False, help="Add timestamp suffix to the file name"),
 ):
     hf_token = os.getenv("HF_TOKEN")
     if hf_token:
         typer.echo(f"Using HF_TOKEN from environment variable")
     if not hf_token or not hf_token.startswith("hf_"):
-        hf_token: str = typer.prompt("Enter your Hugging Face token", hide_input=True, value_proc=str)
-    
+        hf_token: str = typer.prompt(
+            "Enter your Hugging Face token", hide_input=True, value_proc=str
+        )
+
     dataset = load_dataset(path, token=hf_token)
-    
+
     dump_dir: Path = Path(dump_dir)
     dump_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def dump_if_missing(dst: Dataset, path: Path):
         if add_ts:
             path = path.with_name(get_ts_filename(path.name, add_random=False).name)
@@ -301,15 +346,18 @@ def download_dataset(
             return
         typer.echo(f"Dumping dataset to {path!r}")
         dst.to_json(path)
-    
+
     if isinstance(dataset, DatasetDict):
         for s, d in dataset.items():
             file_name: Path = dump_dir / f"{s}.jsonl"
             dump_if_missing(d, file_name)
     elif isinstance(dataset, Dataset):
-        file_name = dump_dir / f'{typer.prompt("Enter file name for the dataset", value_proc=str)}.jsonl'
+        file_name = (
+            dump_dir
+            / f'{typer.prompt("Enter file name for the dataset", value_proc=str)}.jsonl'
+        )
         dump_if_missing(dataset, file_name)
-    
+
 
 @app.command(name="translate", help="Translate dataset")
 def translate_dataset(
@@ -323,16 +371,21 @@ def translate_dataset(
         Path("dataset/"), help="Directory to dump the translated dataset to"
     ),
     llm_type: LLMType = typer.Option(
-        None, "--llm-type", "-l", help="Dataset for which LLM type. If not specified, LLM type is inferred from the JSONL file name"
+        None,
+        "--llm-type",
+        "-l",
+        help="Dataset for which LLM type. If not specified, LLM type is inferred from the JSONL file name",
     ),
-    quiet: bool = typer.Option(
-        False, help="Don't print verbose messages"
-    ),
+    quiet: bool = typer.Option(False, help="Don't print verbose messages"),
     parallel_rows: int = typer.Option(
         10, "--parallel-rows", "-r", min=1, help="Number of rows to process in parallel"
     ),
     workers: int = typer.Option(
-        4, "--workers", "-w", min=1, help="Number of parallel workers to use for internal processing (inside each row)"
+        4,
+        "--workers",
+        "-w",
+        min=1,
+        help="Number of parallel workers to use for internal processing (inside each row)",
     ),
     page_size: int = typer.Option(
         None, "--page-size", "-p", min=1, help="Number of rows to take"
@@ -354,23 +407,22 @@ def translate_dataset(
     if page_size is not None and page_size > 0:
         dataset = dataset.page(page_size, 0)
     typer.echo(f"Translating and dumping {len(dataset)} rows to {dump_file}")
-    
-    dump_file.parent.mkdir(parents=True, exist_ok=True) 
+
+    dump_file.parent.mkdir(parents=True, exist_ok=True)
     dt = DatasetTranslator(language)
-    
+
     def translate_and_dump(_dataset: LLMDatasetWithTypes):
         for _d in _dataset.page_iterator(1, use_tqdm=False):
             dump_file.open("a").write(
-                dt
-                .translate_dataset(_d, workers)
+                dt.translate_dataset(_d, workers)
                 .to_messages()
                 .messages_list[0]
-                .model_dump_json() + "\n"
+                .model_dump_json()
+                + "\n"
             )
-    
+
     typer.echo(f"Running {parallel_rows} row(s) in parallel")
     for d in dataset.page_iterator(page_size=parallel_rows):
         run_parallel_exec_but_return_in_order(
-            translate_and_dump, 
-            d.page_iterator(1, use_tqdm=False)
+            translate_and_dump, d.page_iterator(1, use_tqdm=False)
         )

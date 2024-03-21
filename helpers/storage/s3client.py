@@ -50,14 +50,23 @@ class S3Client:
         return local_path
 
     def upload_file(
-        self, local_path: str, object_key: str = None, bucket_name: str = None
-    ) -> dict:
+        self,
+        local_path: str | Path,
+        object_key: str = None,
+        bucket_name: str = None,
+        metadata: dict = {},
+    ) -> str:
         bucket_name = bucket_name or self.default_bucket
         local_path: Path = Path(local_path)
         if not local_path.exists():
             raise FileNotFoundError(f"File not found: {local_path}")
         object_key = local_path.as_posix() if not object_key else object_key
-        self.client.upload_file(local_path.as_posix(), bucket_name, object_key)
+        self.client.upload_file(
+            local_path.as_posix(),
+            bucket_name,
+            object_key,
+            ExtraArgs={"Metadata": metadata},
+        )
         return f"https://{bucket_name}.{self.endpoint_url}/{object_key}"
 
     def delete_file(self, object_key: str, bucket_name: str = None) -> dict:
