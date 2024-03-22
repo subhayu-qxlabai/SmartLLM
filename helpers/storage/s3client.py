@@ -40,13 +40,14 @@ class S3Client:
         return response.get("Contents", [])
 
     def download_file(
-        self, object_key: str, local_parent: str = None, bucket_name: str = None
+        self, object_key: str, local_parent: str = None, bucket_name: str = None, delete_remote = False,
     ) -> dict:
         bucket_name = bucket_name or self.default_bucket
         local_parent: Path = Path(local_parent) if local_parent else Path(".")
         local_path = local_parent / object_key or Path(object_key)
         local_path.parent.mkdir(parents=True, exist_ok=True)
         self.client.download_file(bucket_name, object_key, local_path.as_posix())
+        self.delete_file(object_key, bucket_name) if delete_remote else None
         return local_path
 
     def upload_file(
@@ -55,6 +56,7 @@ class S3Client:
         object_key: str = None,
         bucket_name: str = None,
         metadata: dict = {},
+        delete_local = True,
     ) -> str:
         bucket_name = bucket_name or self.default_bucket
         local_path: Path = Path(local_path)
@@ -67,6 +69,7 @@ class S3Client:
             object_key,
             ExtraArgs={"Metadata": metadata},
         )
+        local_path.unlink() if delete_local else None
         return f"https://{bucket_name}.{self.endpoint_url}/{object_key}"
 
     def delete_file(self, object_key: str, bucket_name: str = None) -> dict:

@@ -147,19 +147,21 @@ def generate(
             dump_dir=dump_dir,
             generated_topics_file=generated_topics_file,
         )
+    except KeyboardInterrupt:
+        typer.echo("Interrupted!")
     finally:
         d = LLMDataset.from_dir(dump_dir, log_errors=not quiet)
         dump_file = Path(dump_dir).parent / get_ts_filename(f"{language}.json")
         d.to_file(file=dump_file.name, dir=dump_file.parent)
         typer.echo(f"Dumped dataset to file: {dump_file}")
-        import socket
         if upload:
-            s3_client = S3Client()
+            import socket
             _host = socket.gethostname()
+            s3_client = S3Client()
             metadata = {"language": language, "host": _host}
             s3_url = s3_client.upload_file(
                 local_path=dump_file, 
-                object_key=(dump_file.parent / f"{dump_file.stem}_{_host}{dump_file.suffix}").as_posix(),
+                object_key=(dump_file.parent / _host / dump_file.name).as_posix(),
                 metadata=metadata, 
             )
             typer.echo(f"Uploaded dataset to {s3_url!r} with metadata: {metadata}")
@@ -239,13 +241,8 @@ def to_file(
                         dataset = (
                             existing_dataset.get_llm_type_rows(LLMType(_type)) + dataset
                         )
-        (
-            typer.echo(
-                f"Dumping {_type} dataset with {len(dataset)} rows to {filename}"
-            )
-            if not quiet
-            else None
-        )
+        if not quiet:
+            typer.echo(f"Dumping {_type} dataset with {len(dataset)} rows to {filename}")
         dataset.to_file(filename, dir=dump_dir)
 
 
