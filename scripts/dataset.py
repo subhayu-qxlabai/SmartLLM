@@ -166,7 +166,7 @@ def generate(
         typer.echo("Interrupted!")
     finally:
         d = LLMDataset.from_dir(dump_dir, log_errors=not quiet)
-        dump_file = Path(dump_dir).parent / get_ts_filename(f"{language}.json")
+        dump_file = Path(dump_dir).parent / get_ts_filename(f"{language}.json", add_random=False)
         d.to_file(file=dump_file.name, dir=dump_file.parent)
         typer.echo(f"Dumped dataset to file: {dump_file}")
         if upload:
