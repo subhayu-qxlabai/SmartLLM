@@ -49,6 +49,9 @@ def generate_dataset(
     dump_dir: Path = Path(dump_dir)
     dump_dir.mkdir(parents=True, exist_ok=True)
     topics_file: Path | None = Path(topics_file) if topics_file is not None else None
+    generated_topics_file: Path = Path(generated_topics_file)
+    generated_topics_file.parent.mkdir(parents=True, exist_ok=True)
+    generated_topics_file = generated_topics_file.parent / f"{language}_{generated_topics_file.name}"
     dg = DatasetGenerator(
         dump_dir=dump_dir,
         generated_topics_file=generated_topics_file,
@@ -77,6 +80,18 @@ def generate_dataset(
     typer.echo(f"Generated {len(rows)} rows!")
     return rows
 
+def upload_dataset(dump_file: Path, language: str):
+    import socket
+    _host = socket.gethostname()
+    s3_client = S3Client()
+    metadata = {"language": language, "host": _host}
+    s3_url = s3_client.upload_file(
+        local_path=dump_file, 
+        object_key=(dump_file.parent / _host / dump_file.name).as_posix(),
+        metadata=metadata, 
+    )
+    typer.echo(f"Uploaded dataset to {s3_url!r} with metadata: {metadata}")
+    return s3_url
 
 @app.command(help="Generates dataset")
 def generate(
@@ -155,16 +170,8 @@ def generate(
         d.to_file(file=dump_file.name, dir=dump_file.parent)
         typer.echo(f"Dumped dataset to file: {dump_file}")
         if upload:
-            import socket
-            _host = socket.gethostname()
-            s3_client = S3Client()
-            metadata = {"language": language, "host": _host}
-            s3_url = s3_client.upload_file(
-                local_path=dump_file, 
-                object_key=(dump_file.parent / _host / dump_file.name).as_posix(),
-                metadata=metadata, 
-            )
-            typer.echo(f"Uploaded dataset to {s3_url!r} with metadata: {metadata}")
+            upload_dataset(dump_file, language)
+            
 
 def get_dataset_map(
     source: str | Path, quiet=False, split_by_llm=True, validate_schema=True
