@@ -162,7 +162,7 @@ class LLM3DatasetRow(DatasetRow):
         if isinstance(values, BaseModel):
             values = values.model_dump()
         values["input"] = try_load_model(ExtractorInput, values["input"])
-        values["output"] = try_json_loads(values["output"])
+        values["output"] = try_json_loads(values["output"], default_return={})
         return values
 
 

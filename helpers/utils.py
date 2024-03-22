@@ -131,6 +131,8 @@ def clean_json_str(text: str) -> str:
     return remove_comments(remove_backticks(text))
 
 def try_json_loads(text: str, default_return = []):
+    if isinstance(text, type(default_return)):
+        return text
     try:
         return json.loads(text)
     except:
