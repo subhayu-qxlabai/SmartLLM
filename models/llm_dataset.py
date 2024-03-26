@@ -1,3 +1,4 @@
+from functools import partial
 from itertools import chain
 import json
 import uuid
@@ -8,6 +9,7 @@ from pydantic import Field, root_validator
 from datasets import Dataset
 from tqdm import tqdm
 
+from config import SUPPORTED_LANGUAGES
 from helpers.utils import get_timestamp_uid, try_json_loads, run_parallel_exec
 from models.base import CustomBaseModel as BaseModel
 from models.inputs import StepsInput
@@ -75,10 +77,14 @@ class DatasetRow(BaseModel):
         return dump_file
 
     @classmethod
-    def from_file(cls, file: str | Path, log_errors=True):
+    def from_file(cls, file: str | Path, log_errors = True, language: str = None):
         try:
             with open(file, "r") as f:
-                return cls.model_validate_json(f.read())
+                m = cls.model_validate_json(f.read())
+                default_lang = DatasetRow.model_fields['language'].default
+                if language not in [None, default_lang] and m.language == default_lang:
+                    m.language = language
+                return m
         except Exception as e:
             if log_errors:
                 print(e)
@@ -86,8 +92,9 @@ class DatasetRow(BaseModel):
     @classmethod
     def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
         dir = Path(dir)
+        language = ([l for l in SUPPORTED_LANGUAGES if l in dir.as_posix()] or [None])[0]
         dump_files = list(dir.rglob("*.json"))
-        rows = [cls.from_file(file, log_errors) for file in dump_files]
+        rows = [cls.from_file(file, log_errors, language) for file in dump_files]
         return [row for row in rows if row is not None]
     
     def to_alpaca(self):
@@ -240,12 +247,19 @@ class LLMDatasetBase(BaseModel):
     def from_files(
         cls, 
         files: list[str | Path] = [],
-        dir: str | Path = DEFAULT_DATASET_DIR,
+        dir: str | Path = None,
         log_errors = True,
+        threads = 4,
     ):
-        data: list[tuple[str | Path, LLMDatasetBase]] = run_parallel_exec(
-            cls.from_file, set(files), dir, None, log_errors, quiet=not log_errors
-        )
+        from_file_fp = partial(cls.from_file, None, None, log_errors=log_errors)
+        if dir is None:
+            data: list[tuple[str | Path, LLMDatasetBase]] = run_parallel_exec(
+                from_file_fp, set(files), quiet=not log_errors, max_workers=threads
+            )
+        else:
+            data: list[tuple[str | Path, LLMDatasetBase]] = run_parallel_exec(
+                cls.from_file, set(files), dir, None, log_errors, quiet=not log_errors, max_workers=threads
+            )
         data = [x[1].rows for x in data if isinstance(x[1], cls)]
         return cls(rows=list(chain(*data)))
     

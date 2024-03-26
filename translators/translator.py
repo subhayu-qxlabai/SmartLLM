@@ -1,18 +1,12 @@
-from itertools import chain
 from typing import Any, Callable
+from config import SUPPORTED_LANGUAGES
 from helpers.call_openai import call_openai_api
 from helpers.utils import recursive_string_operator, run_parallel_exec_but_return_in_order
 
 class Translator:
     """A class for translating strings. Can be used to translate nested objects like lists, dictionaries, BaseModel objects, etc."""
     
-    region_languages = {
-        "indian": ["hindi", "bengali", "punjabi", "telugu", "marathi", "tamil", "urdu", "gujarati", "kannada", "odia", "malayalam", "sanskrit", "assamese", "maithili", "konkani", "manipuri", "nepali", "santali", "sindhi", "kashmiri"],
-        "international": ["english", "spanish", "french", "german", "italian", "dutch", "portuguese", "russian", "mandarin chinese", "cantonese chinese", "japanese", "korean", "arabic", "turkish", "greek", "swedish", "danish", "finnish", "norwegian", "polish", "hungarian", "czech", "romanian", "thai", "indonesian", "malay", "vietnamese", "hebrew", "slovak", "bulgarian", "croatian", "lithuanian", "slovenian", "latvian", "estonian", "afrikaans", "zulu", "xhosa", "swahili", "amharic", "albanian", "armenian", "azerbaijani", "basque", "belarusian", "bosnian", "catalán", "cebuano", "corsican", "esperanto", "frisian", "galician", "georgian", "guarani", "haitian creole", "hausa", "hawaiian", "icelandic", "irish", "javanese", "kazakh", "khmer", "kurdish", "kyrgyz", "lao", "latin", "latvian", "luxembourgish", "malagasy", "maori", "mongolian", "burmese", "pashto", "persian", "samoan", "sesotho", "shona", "somali", "sundanese", "tajik"],
-    }
-    """Map of regions to supported languages."""
-    
-    supported_languages = [x.lower() for x in chain(*region_languages.values())]
+    supported_languages = SUPPORTED_LANGUAGES
     """Supported languages for translation."""
     
     def __init__(self, language: str, predicate: Callable[[str], str|None] = None) -> None:
