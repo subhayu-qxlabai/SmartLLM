@@ -43,6 +43,9 @@ def try_load_model(model: BaseModel, val):
             return model.model_validate(val)
     except Exception as e:
         return val
+    
+def get_language(path: str | Path):
+    return ([l for l in SUPPORTED_LANGUAGES if l in Path(path).as_posix()] or [None])[0]
 
 class LLMType(str, Enum):
     LLM1 = "llm1"
@@ -72,19 +75,17 @@ class DatasetRow(BaseModel):
     def to_file(self, dir: str | Path = DEFAULT_DATASET_DIR):
         dump_file = Path(dir) / self.llm.value / f"{str(self.uid)}.json"
         dump_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(dump_file, "w") as f:
-            json.dump(self.model_dump(mode="json"), f, indent=2)
+        dump_file.write_text(self.model_dump_json())
         return dump_file
 
     @classmethod
     def from_file(cls, file: str | Path, log_errors = True, language: str = None):
         try:
-            with open(file, "r") as f:
-                m = cls.model_validate_json(f.read())
-                default_lang = DatasetRow.model_fields['language'].default
-                if language not in [None, default_lang] and m.language == default_lang:
-                    m.language = language
-                return m
+            m = cls.model_validate_json(Path(file).read_text())
+            default_lang = DatasetRow.model_fields['language'].default
+            if language not in [None, default_lang] and m.language == default_lang:
+                m.language = language
+            return m
         except Exception as e:
             if log_errors:
                 print(e)
@@ -92,7 +93,7 @@ class DatasetRow(BaseModel):
     @classmethod
     def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
         dir = Path(dir)
-        language = ([l for l in SUPPORTED_LANGUAGES if l in dir.as_posix()] or [None])[0]
+        language = get_language(dir)
         dump_files = list(dir.rglob("*.json"))
         rows = [cls.from_file(file, log_errors, language) for file in dump_files]
         return [row for row in rows if row is not None]
@@ -101,6 +102,7 @@ class DatasetRow(BaseModel):
         if self.system is None and self.input is None and self.output is None:
             return None
         return AlpacaMessages(
+            llm=self.llm.value,
             language=self.language,
             system=self.system,
             input=self.input,
@@ -119,7 +121,7 @@ class DatasetRow(BaseModel):
     
     def __hash__(self):
         return hash((
-            # self.llm, 
+            self.llm, 
             self.language,
             # self.system, 
             str(self.input), 
@@ -128,7 +130,7 @@ class DatasetRow(BaseModel):
         ))
     
     def __repr__(self):
-        return f"{self.__class__.__name__}(llm={self.llm}, system={self.system}, input={self.input}, output={self.output})"
+        return f"{self.__class__.__name__}(llm={self.llm}, language={self.language}, system={self.system}, input={self.input}, output={self.output})"
 
 
 class LLM1DatasetRow(DatasetRow):
@@ -211,7 +213,10 @@ class LLMDatasetBase(BaseModel):
         elif fmt in [ConversationFormat.openai, ConversationFormat.openai.value]:
             m_list = MessagesList()
             for row in self.rows:
-                m = Messages()
+                m = Messages(
+                    llm=row.llm.value,
+                    language=row.language,
+                )
                 if row.system:
                     m.messages.append(SystemMessage(content=row.system))
                 if row.input:
@@ -225,8 +230,7 @@ class LLMDatasetBase(BaseModel):
     
     def to_file(self, file: str | Path = "all.json", dir: str | Path = DEFAULT_DATASET_DIR):
         print(f"Dumped {len(self.rows)} rows to {(Path(dir) / file).absolute().as_posix()!r}")
-        with open(Path(dir) / file, "w") as f:
-            f.write(self.model_dump_json())
+        (Path(dir) / file).write_text(self.model_dump_json())
 
     @classmethod
     def from_file(
@@ -237,11 +241,17 @@ class LLMDatasetBase(BaseModel):
         log_errors = True,
     ):
         full_path = Path(full_path) if full_path else Path(dir) / file
-        with open(full_path, "r") as f:
-            try:
-                return cls.model_validate_json(f.read())
-            except Exception as e:
-                print(f"Got error: {e}") if log_errors else None
+        try:
+            m = cls.model_validate_json(full_path.read_text())
+            language = get_language(full_path)
+            default_lang = DatasetRow.model_fields['language'].default
+            if language is not None:
+                for row in m.rows:
+                    if row.language == default_lang and language != default_lang:
+                        row.language = language
+            return m
+        except Exception as e:
+            print(f"Got error: {e}") if log_errors else None
     
     @classmethod
     def from_files(
