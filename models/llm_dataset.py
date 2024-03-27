@@ -293,25 +293,28 @@ class LLMDatasetBase(BaseModel):
         
     @classmethod
     def from_messages(cls, messages: AlpacaMessagesList, llm_type: LLMType, strict: bool = False):
+        vals = [
+            {
+                "llm": x.llm,
+                "language": x.language,
+                "system": x.system,
+                "input": x.input,
+                "output": x.output,
+            }
+            for x in messages
+        ]
         if strict:
-            rows = [llm_row_factory(llm_type).try_model_validate(
-                val={
-                    "system": x.system,
-                    "input": x.input,
-                    "output": x.output,
-                },
-                none_on_fail=True,
-            ) for x in messages]
-        else:
             rows = [
-                DatasetRow(
-                    llm=llm_type, 
-                    system=x.system, 
-                    input=x.input, 
-                    output=x.output
-                ) for x in messages
+                llm_row_factory(llm_type).try_model_validate(val=x, none_on_fail=True)
+                for x in vals
             ]
-        return cls(rows=[x for x in rows if None not in [x, getattr(x, "input", None), getattr(x, "output", None)]])
+        else:
+            rows = [DatasetRow(**x) for x in vals]
+        return cls(
+            rows=[
+                x for x in rows if None not in [x, getattr(x, "input", None), getattr(x, "output", None)]
+            ]
+        )
 
     @classmethod
     def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
@@ -324,6 +327,11 @@ class LLMDatasetBase(BaseModel):
         if llm_type is None:
             llm_type = LLMType.from_substr(jsonl_file.as_posix(), none_on_fail=False)
         d = cls.from_dataset(Dataset.from_json(jsonl_file.as_posix()), llm_type, strict)
+        default_lang = DatasetRow.model_fields['language'].default
+        language = get_language(jsonl_file.as_posix())
+        for m in d.rows:
+            if language not in [None, default_lang] and m.language == default_lang:
+                m.language = language
         return d
 
     def page(self, page_size: int = 10, offset: int = 0):
