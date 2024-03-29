@@ -72,6 +72,22 @@ def get_llm_response(prompt):
     
     return decoded_output[0]
 
+# -----------------------------------
+# TODO: Remove this block afterwards
+
+import json
+from models.generic import QuestionSplit, BaseModel
+from pydantic import root_validator
+
+class SplitOutput(BaseModel):
+    output: QuestionSplit
+    
+    @root_validator(pre=True)
+    def validate(cls, values: dict):
+        values["output"] = json.loads(values["output"])
+        return values
+    
+# ----------------------------------
 
 def break_question(question: str):
     prompt = get_prompt(question)
@@ -81,9 +97,9 @@ def break_question(question: str):
     response = TextUtils.get_middle_text(response, prompt, tokenizer.eos_token).strip()
     if response:
         try:
-            return QuestionSplit(**json.loads(response))
+            return SplitOutput.model_validate_json(response)
         except Exception as e:
-            # print(e)
+            print(e)
             return response
     else:
         return response 

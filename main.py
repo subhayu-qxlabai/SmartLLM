@@ -11,7 +11,7 @@ from models.outputs import StepsOutput
 from step_runner import StepRunner
 from infer.generic import ask_llm
 from infer.steps_generator import get_steps
-from infer.question_breaker import *
+from infer.question_breaker import break_question
 from helpers.middleware import ProcessTimeMiddleware
 from helpers.utils import get_ts_filename, remove_special_chars
 from pathlib import Path
@@ -42,17 +42,13 @@ class OutModel(BaseModel):
 @app.get("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
     # print(question)
-    split: QuestionSplit = break_question(question)
+    split: QuestionSplit = break_question(question).output
     print(f"{split=}\n")
 
     # if not isinstance(split, QuestionSplit):
     #     raise HTTPException(status_code=400, detail="Failed to split the question")
 
-    split = json.loads(split)
-    Output = json.loads(split['output'])
-    split = Output
-
-    if split['can_i_answer']:
+    if split.can_i_answer:
         answer = ask_llm(question)
         if not unanswered_regex.search(answer):
             print(f"{split=}")
