@@ -1,7 +1,7 @@
 import re
-from itertools import chain
 import json
-from pydantic import BaseModel
+from itertools import chain
+from pydantic import BaseModel, ValidationError
 from fastapi import FastAPI, HTTPException, Query
 
 from helpers.vectorstore.faisser import FaissDB
@@ -15,7 +15,8 @@ from infer.question_breaker import *
 from helpers.middleware import ProcessTimeMiddleware
 from helpers.utils import get_ts_filename, remove_special_chars
 from pathlib import Path
-from uvicorn import run
+
+
 app = FastAPI()
 app.add_middleware(ProcessTimeMiddleware)
 
@@ -95,6 +96,6 @@ async def process_question(question: str = Query(..., title="User Question")):
 
 
 if __name__ == "__main__":
-    # import uvicorn
+    import uvicorn
 
-    run("main:app", host="0.0.0.0", port=8080, reload=True, timeout_keep_alive=600)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
