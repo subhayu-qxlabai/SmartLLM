@@ -1,6 +1,6 @@
 import re
 from itertools import chain
-
+import json
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Query
 
@@ -11,10 +11,11 @@ from models.outputs import StepsOutput
 from step_runner import StepRunner
 from infer.generic import ask_llm
 from infer.steps_generator import get_steps
+from infer.question_breaker import *
 from helpers.middleware import ProcessTimeMiddleware
 from helpers.utils import get_ts_filename, remove_special_chars
 from pathlib import Path
-
+from uvicorn import run
 app = FastAPI()
 app.add_middleware(ProcessTimeMiddleware)
 
@@ -35,16 +36,22 @@ class OutModel(BaseModel):
     steps_output: StepsOutput | str | None = None
     context_dict: dict | None = None
     response: str | None = None
+    
 
 @app.post("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
+    # print(question)
     split: QuestionSplit = break_question(question)
-    # print(f"{split=}\n")
+    print(f"{split=}\n")
 
-    if not isinstance(split, QuestionSplit):
-        raise HTTPException(status_code=400, detail="Failed to split the question")
+    # if not isinstance(split, QuestionSplit):
+    #     raise HTTPException(status_code=400, detail="Failed to split the question")
 
-    if split.can_i_answer:
+    split = json.loads(split)
+    Output = json.loads(split['output'])
+    split = Output
+
+    if split['can_i_answer']:
         answer = ask_llm(question)
         if not unanswered_regex.search(answer):
             print(f"{split=}")
@@ -53,10 +60,11 @@ async def process_question(question: str = Query(..., title="User Question")):
                 answer=answer,
             )
     
-    function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split.tasks+[question, "llm"]]))
+    function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split['tasks']+[question, "llm"]]))
+    # print(function_docs)
     functions = set([Function.model_validate(doc.metadata) for doc in function_docs])
     # print(f"{functions=}\n")
-    input_schema = StepsInput(query=split.question, steps=split.tasks, functions=functions)
+    input_schema = StepsInput(query=split['question'], steps=split['tasks'], functions=functions)
     
     step_output: StepsOutput = get_steps(input_schema)
     print(f"{step_output=}\n")
@@ -67,14 +75,18 @@ async def process_question(question: str = Query(..., title="User Question")):
     runner = StepRunner(question, step_output.steps)
     runner.run_steps()
     print(f"{runner.context_dict=}\n")
-
-    response = OutModel(
-        split=split,
-        steps_input=input_schema, 
-        steps_output=step_output, 
-        context_dict=runner.context_dict, 
-        response=list(list(runner.context_dict.values())[-1].get("function", {"": {"output": ""}}).values())[-1]['output'],
-    )
+    print(f"{list(runner.context_dict.values())[-1]=}")
+    print(f"""{list(list(runner.context_dict.values())[-1].get("function", {"": {"output": ""}}).values())[-1]['output']=}""")
+    try:
+        response = OutModel(
+            split=split,
+            steps_input=input_schema, 
+            steps_output=step_output, 
+            context_dict=runner.context_dict, 
+            response=list(list(runner.context_dict.values())[-1].get("function", {"": {"output": ""}}).values())[-1]['output'],
+        )
+    except ValidationError as exc:
+        print(repr(exc.errors()[0]))
     filepath = Path(f"run_logs/{remove_special_chars(question.lower())}.json")
     filepath.mkdir(parents=True,exist_ok=True)
     with open(get_ts_filename(filepath), "w") as f:
@@ -83,6 +95,6 @@ async def process_question(question: str = Query(..., title="User Question")):
 
 
 if __name__ == "__main__":
-    import uvicorn
+    # import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    run("main:app", host="0.0.0.0", port=8080, reload=True, timeout_keep_alive=600)

@@ -3,7 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 device = "cuda" # the device to load the model onto
 
-MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
+# MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
+MODEL_NAME = "bigscience/bloom-7b1"
 
 model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)

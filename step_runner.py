@@ -117,13 +117,15 @@ class StepRunner:
         # func=globals()[name] #this will be used if the function is defined in the same module
         # res=func(**dict) # run the function
         # res = self._generate_func_output(
-        #     name, param_dict
+        #     name, **param_dict
         # )  # TODO: remove this afterwards
 
         # func=globals()[name](**params_dict)
         default_func=partial(self._generate_func_output,name)
-        # func=getattr(apis_scripts,name,default_func)(**param_dict)
         func=getattr(apis_scripts,name,default_func)(**param_dict)
+        print(name)
+        print(param_dict)
+        # func=getattr(apis_scripts,name,default_func)(**param_dict)
 
         # print(f"{func=}")
         

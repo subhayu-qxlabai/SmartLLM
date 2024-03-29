@@ -18,8 +18,8 @@ login(token="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")
 
 print("------------Loading LLM3-----------")
 
-finetuned_model = AutoModelForCausalLM.from_pretrained("Divyanshu04/LLM3", device_map='auto', use_cache=False)
-tokenizer = AutoTokenizer.from_pretrained("Divyanshu04/LLM3", device_map='auto')
+finetuned_model = AutoModelForCausalLM.from_pretrained("/workspace/bloom_mllm3_grid_search_5epochs_2batchsize_lr5e-0520mar_reg/checkpoint-3000", device_map='auto', use_cache=False)
+tokenizer = AutoTokenizer.from_pretrained("/workspace/bloom_mllm3_grid_search_5epochs_2batchsize_lr5e-0520mar_reg/checkpoint-3000", device_map='auto')
 
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
@@ -90,8 +90,8 @@ def extract_contexts(ext_input: ExtractorInput):
     else:
         return {x.name: response for x in ext_input.schema}
 
-if __name__ == "__main__":
-    input_data = {"schema": [{"name": "electric_vehicle_sales_statistics", "type": "object", "description": "Statistical data on electric vehicle sales for the year 2023."}], "context": [{"statistics": {"total_sales": "Electric vehicle sales have reached 2.5 million worldwide by mid-2023.", "monthly_increase_rate": "There has been an average monthly increase of 10% in sales compared to the previous year.", "market_share": "Electric vehicles now account for 15% of the total market share in the automotive industry.", "leading_markets": ["Europe", "China", "United States"], "top_selling_models": ["Tesla Model Y", "Volkswagen ID.4", "Ford Mustang Mach-E"]}}]}
-    input_schema = ExtractorInput.model_validate(input_data)
-    output = extract_contexts(input_schema)
-    print(output)
+# if __name__ == "__main__":
+#     input_data = {"schema": [{"name": "electric_vehicle_sales_statistics", "type": "object", "description": "Statistical data on electric vehicle sales for the year 2023."}], "context": [{"statistics": {"total_sales": "Electric vehicle sales have reached 2.5 million worldwide by mid-2023.", "monthly_increase_rate": "There has been an average monthly increase of 10% in sales compared to the previous year.", "market_share": "Electric vehicles now account for 15% of the total market share in the automotive industry.", "leading_markets": ["Europe", "China", "United States"], "top_selling_models": ["Tesla Model Y", "Volkswagen ID.4", "Ford Mustang Mach-E"]}}]}
+#     input_schema = ExtractorInput.model_validate(input_data)
+#     output = extract_contexts(input_schema)
+#     print(output)
