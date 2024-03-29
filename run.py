@@ -13,13 +13,13 @@ app.add_typer(dataset.app, name="dataset")
 def run_api(
     port: int = typer.Option(8080, "--port", "-p", help="Port to run the API server on"),
     internal: bool = typer.Option(
-        False, "--internal", "-i", help="Run the API server on localhost",
+        False, help="Run the API server on localhost",
     ),
     reload: bool = typer.Option(
         True, "--reload", "-r", help="Reload the API server on changes",
     ),
 ):
-    _ip = "0.0.0.0" if internal else "127.0.0.1"
+    _ip = "127.0.0.1" if internal else "0.0.0.0"
     uvicorn.run("main:app", host=_ip, port=port, reload=reload)
 
 if __name__ == "__main__":
