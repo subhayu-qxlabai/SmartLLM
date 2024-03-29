@@ -39,7 +39,7 @@ class OutModel(BaseModel):
     response: str | None = None
     
 
-@app.post("/process_question", response_model=OutModel|QA)
+@app.get("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
     # print(question)
     split: QuestionSplit = break_question(question)
