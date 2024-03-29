@@ -1,5 +1,6 @@
 from typing import List
 from models.base import CustomBaseModel as BaseModel
+from helpers.utils import hash_uuid
 
 
 class FunctionProperties(BaseModel):
@@ -18,7 +19,7 @@ class Function(BaseModel):
     parameters: Parameters
 
     def __hash__(self) -> int:
-        return hash(f"{self.name}|{self.description}|{','.join([x.name for x in self.parameters.properties])}")
+        return hash_uuid(f"{self.name}|{self.description}|{','.join([x.name for x in self.parameters.properties])}").int
 
 class Step(BaseModel):
     query: str
@@ -30,5 +31,5 @@ class StepsInput(BaseModel):
     functions: List[Function]
 
     def __hash__(self) -> int:
-        return hash(f"{self.query}")
+        return hash_uuid(f"{self.query}").int
     

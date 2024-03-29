@@ -41,7 +41,7 @@ class S3Client:
 
     def download_file(
         self, object_key: str, local_parent: str = None, bucket_name: str = None, delete_remote = False,
-    ) -> dict:
+    ):
         bucket_name = bucket_name or self.default_bucket
         local_parent: Path = Path(local_parent) if local_parent else Path(".")
         local_path = local_parent / object_key or Path(object_key)

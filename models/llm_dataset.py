@@ -1,6 +1,5 @@
 from functools import partial
 from itertools import chain
-import json
 import uuid
 import random
 from enum import Enum
@@ -9,8 +8,9 @@ from pydantic import Field, root_validator
 from datasets import Dataset
 from tqdm import tqdm
 
+
 from config import SUPPORTED_LANGUAGES
-from helpers.utils import get_timestamp_uid, try_json_loads, run_parallel_exec
+from helpers.utils import get_timestamp_uid, try_json_loads, run_parallel_exec, hash_uuid
 from models.base import CustomBaseModel as BaseModel
 from models.inputs import StepsInput
 from models.outputs import StepsOutput
@@ -71,6 +71,20 @@ class DatasetRow(BaseModel):
     system: str | None = None
     input: str | dict | None = None
     output: str | dict | None = None
+    
+    @property
+    def hash_text(self):
+        return "|".join((
+            self.llm.value, 
+            self.language,
+            # self.system, 
+            str(self.input), 
+            str(self.output), 
+        ))
+    
+    @property
+    def uid(self):
+        return hash_uuid(self.hash_text)
 
     def to_file(self, dir: str | Path = DEFAULT_DATASET_DIR):
         dump_file = Path(dir) / self.llm.value / f"{str(self.uid)}.json"
@@ -120,14 +134,7 @@ class DatasetRow(BaseModel):
             return None if none_on_fail else val
     
     def __hash__(self):
-        return hash((
-            self.llm, 
-            self.language,
-            # self.system, 
-            str(self.input), 
-            str(self.output), 
-            # self.uid, 
-        ))
+        return self.uid.int
     
     def __repr__(self):
         return f"{self.__class__.__name__}(llm={self.llm}, language={self.language}, system={self.system}, input={self.input}, output={self.output})"
@@ -288,7 +295,7 @@ class LLMDatasetBase(BaseModel):
     
     def unique(self):
         return self.__class__(
-            rows=list({hash(x): x for x in self.rows}.values())
+            rows=list({hash_uuid(x): x for x in self.rows}.values())
         )
         
     @classmethod

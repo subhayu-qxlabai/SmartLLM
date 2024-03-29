@@ -8,6 +8,7 @@ from functools import partial
 from datasets import Dataset
 from pydantic import root_validator
 
+from helpers.utils import hash_uuid
 from models.base import CustomBaseModel as BaseModel
 from helpers.formatter import MessagesFormatter
 
@@ -74,11 +75,10 @@ class Messages(BaseModel):
     def __contains__(self, item):
         return item in self.messages
 
-    def __hash__(self) -> int:
-        return hash(tuple(
-            [self.llm, self.language]
-            +[x.content for x in self.messages if x.role != "system"]
-        ))
+    def __hash__(self):
+        return hash_uuid(
+            self.llm or ""+self.language+"|".join([x.content for x in self.messages if x.role != "system"])
+        ).int
 
     def __repr__(self):
         return self.model_dump_json()
@@ -115,17 +115,19 @@ class AlpacaMessages(BaseModel):
     @property
     def formatter(self):
         return partial(MessagesFormatter, messages=[self.to_messages().to_list()])
+    
+    @property
+    def hash_text(self):
+        return "|".join((
+            self.llm or "",
+            self.language,
+            # self.system or "",
+            self.input or "",
+            self.output or "",
+        ))
 
-    def __hash__(self) -> int:
-        return hash(
-            (
-                self.llm,
-                self.language,
-                # self.system,
-                self.input,
-                self.output,
-            )
-        )
+    def __hash__(self):
+        return hash_uuid(self.hash_text).int
 
     def __repr__(self):
         return self.model_dump_json()
@@ -185,7 +187,7 @@ class BaseMessagesList(BaseModel):
 
     def unique(self):
         return self.__class__(
-            messages_list=list({hash(x): x for x in self.messages_list}.values())
+            messages_list=list({hash_uuid(x.hash_text): x for x in self.messages_list}.values())
         )
 
     def __add__(self, other: "BaseMessagesList"):

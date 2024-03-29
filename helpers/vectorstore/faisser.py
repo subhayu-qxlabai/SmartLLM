@@ -6,6 +6,7 @@ from langchain.embeddings.huggingface_hub import HuggingFaceHubEmbeddings
 from langchain.embeddings.sentence_transformer import SentenceTransformerEmbeddings
 
 from helpers.singleton.pickler import PickleOperator
+from helpers.utils import hash_uuid
 
 
 class FaissDB:
@@ -39,7 +40,7 @@ class FaissDB:
         docs = [
             Document(
                 page_content=doc.page_content,
-                metadata=doc.metadata | {"content_hash": hash(doc.page_content)},
+                metadata=doc.metadata | {"content_hash": hash_uuid(doc.page_content).hex},
             )
             for doc in docs
         ]

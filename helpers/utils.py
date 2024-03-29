@@ -1,5 +1,6 @@
 import re
 import json
+import subprocess
 import uuid
 import traceback
 from pathlib import Path
@@ -319,3 +320,32 @@ def recursive_string_operator(
         d = recursive_string_operator(data.model_dump(mode="json"), fn, skip_keys)
         return data.__class__(**d)
     return data
+
+def run_in_bg(
+    command: list[str] | str, 
+    stdout = subprocess.DEVNULL, 
+    stderr = subprocess.DEVNULL,
+):
+    """Run a command in the background."""
+    command = command if isinstance(command, list) else command.split(" ")
+    return subprocess.Popen(
+        command, 
+        stdout=stdout, 
+        stderr=stderr,
+    )
+
+
+def hash_uuid(text: str, base_uuid: uuid.UUID | None = None):
+    """
+    Generates a hash-based UUID using the given text and an optional base UUID.
+
+    Args:
+        text (str): The text to be used for generating the hash-based UUID.
+        base_uuid (uuid.UUID | None, optional): The optional base UUID to use for hashing. Defaults to None.
+
+    Returns:
+        uuid.UUID: The hash-based UUID generated from the input text and base UUID.
+    """
+    if not isinstance(base_uuid, uuid.UUID):
+        base_uuid = uuid.NAMESPACE_DNS
+    return uuid.uuid3(base_uuid, text)

@@ -2,6 +2,7 @@ import re
 from typing import List, Optional
 from pydantic import Field, root_validator
 
+from helpers.utils import hash_uuid
 from models.base import CustomBaseModel as BaseModel
 
 
@@ -19,11 +20,11 @@ def is_valid_path(path: str):
 def get_step_item_id(path: str) -> dict[str, int | str]:
     if not is_valid_path(path):
         return {}
-    found = step_and_func_id.findall(path)
+    found: tuple[str] = step_and_func_id.findall(path)[0]
     return {
-        "step_id": int(found[0][0]) - 1,
-        "type": found[0][1],
-        "type_id": found[0][2],
+        "step_id": int(found[0]) - 1,
+        "type": found[1],
+        "type_id": found[2],
     }
 
 
@@ -112,7 +113,7 @@ class StepsOutput(BaseModel):
         ids = get_step_item_id(path)
         if not ids:
             return
-        step_id = int(ids.get("step_id", 1_000_000))
+        step_id = int(ids.get("step_id", 1_000_000_000))
         type_name = ids.get("type")
         type_id = ids.get("type_id")
         if step_id >= len(self.steps):
@@ -166,4 +167,4 @@ class StepsOutput(BaseModel):
         return func_w_extracts
 
     def __hash__(self):
-        return hash(f"{self.overview}")
+        return hash_uuid(self.overview).int
