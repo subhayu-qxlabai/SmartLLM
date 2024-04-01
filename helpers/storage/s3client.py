@@ -49,6 +49,16 @@ class S3Client:
         self.client.download_file(bucket_name, object_key, local_path.as_posix())
         self.delete_file(object_key, bucket_name) if delete_remote else None
         return local_path
+    
+    def download_many(self, object_keys: list[str], local_parent: str = None, bucket_name: str = None, delete_remote = False):
+        bucket_name = bucket_name or self.default_bucket
+        local_parent: Path = Path(local_parent) if local_parent else Path(".")
+        return [
+            self.download_file(object_key, local_parent, bucket_name, delete_remote)
+            for object_key in object_keys
+        ]
+        
+            
 
     def upload_file(
         self,
