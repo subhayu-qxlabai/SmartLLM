@@ -280,17 +280,21 @@ class LLMDatasetBase(BaseModel):
         data = [x[1].rows for x in data if isinstance(x[1], cls)]
         return cls(rows=list(chain(*data)))
     
-    def fill_systems(self, systems: dict[LLMType, list[str]] = None):
-        _systems = {x.system for x in self.rows if x.system}
-        if not isinstance(systems, dict):
-            systems = {}
-        systems = systems + list(_systems)
-        systems = list({x for x in systems if isinstance(x, str)})
-        if len(systems) == 0:
-            return self
-        for row in self.rows:
-            if not row.system:
-                row.system = random.choice(systems)
+    def fill_systems(self, llm_systems: dict[LLMType, list[str]] = None):
+        if not isinstance(llm_systems, dict):
+            llm_systems = {}
+        _llm_systems: dict[LLMType, set[str]] = {}
+        for _row in self.rows:
+            _llm_systems.setdefault(_row.llm, set()).add(_row.system)
+        for _llm_type, _systems in _llm_systems.items():
+            _llm_systems[_llm_type] = {
+                x 
+                for x in _systems.union(llm_systems.get(_llm_type, [])) 
+                if isinstance(x, str)
+            }
+        for _row in self.rows:
+            if _row.system is None:
+                _row.system = random.choice(list(_llm_systems.get(_row.llm, [])))
         return self.__class__(rows=self.rows)
     
     def unique(self):
