@@ -280,10 +280,10 @@ class LLMDatasetBase(BaseModel):
         data = [x[1].rows for x in data if isinstance(x[1], cls)]
         return cls(rows=list(chain(*data)))
     
-    def fill_systems(self, systems: list[str] = None):
+    def fill_systems(self, systems: dict[LLMType, list[str]] = None):
         _systems = {x.system for x in self.rows if x.system}
-        if not isinstance(systems, list):
-            systems = []
+        if not isinstance(systems, dict):
+            systems = {}
         systems = systems + list(_systems)
         systems = list({x for x in systems if isinstance(x, str)})
         if len(systems) == 0:
@@ -295,9 +295,9 @@ class LLMDatasetBase(BaseModel):
     
     def unique(self):
         return self.__class__(
-            rows=list({hash_uuid(x): x for x in self.rows}.values())
+            rows=list({hash_uuid(x.hash_text): x for x in self.rows}.values())
         )
-        
+    
     @classmethod
     def from_messages(cls, messages: AlpacaMessagesList, llm_type: LLMType, strict: bool = False):
         vals = [
@@ -316,7 +316,7 @@ class LLMDatasetBase(BaseModel):
                 for x in vals
             ]
         else:
-            rows = [DatasetRow(**x) for x in vals]
+            rows = [DatasetRow(**x | {"llm": llm_type.value}) for x in vals]
         return cls(
             rows=[
                 x for x in rows if None not in [x, getattr(x, "input", None), getattr(x, "output", None)]
