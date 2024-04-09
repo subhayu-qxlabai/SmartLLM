@@ -57,8 +57,6 @@ class S3Client:
             self.download_file(object_key, local_parent, bucket_name, delete_remote)
             for object_key in object_keys
         ]
-        
-            
 
     def upload_file(
         self,

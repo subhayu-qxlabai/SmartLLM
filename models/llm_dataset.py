@@ -65,7 +65,6 @@ class LLMType(str, Enum):
 
 
 class DatasetRow(BaseModel):
-    uid: uuid.UUID | str = Field(default_factory=UID_FUNCTION)
     llm: LLMType
     language: str = "english"
     system: str | None = None
