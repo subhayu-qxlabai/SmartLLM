@@ -19,7 +19,7 @@ from pathlib import Path
 from huggingface_hub import login
 login(token="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")
 
-finetuned_model = AutoModelForCausalLM.from_pretrained("vipinkatara/mLLM1_model", device_map='auto', use_cache=False)
+finetuned_model = AutoModelForCausalLM.from_pretrained("vipinkatara/mLLM1_model", device_map='auto')
 tokenizer = AutoTokenizer.from_pretrained("vipinkatara/mLLM1_model", device_map='auto')
 
 

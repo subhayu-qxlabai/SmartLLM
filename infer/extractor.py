@@ -13,13 +13,13 @@ from helpers.text_utils import TextUtils
 # model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map='auto', use_cache=False)
 # tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1", device_map='auto')
 
-from huggingface_hub import login
-login(token="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")
-
 print("------------Loading LLM3-----------")
 
-finetuned_model = AutoModelForCausalLM.from_pretrained("/workspace/bloom_mllm3_grid_search_5epochs_2batchsize_lr5e-0520mar_reg/checkpoint-3000", device_map='auto', use_cache=False)
-tokenizer = AutoTokenizer.from_pretrained("/workspace/bloom_mllm3_grid_search_5epochs_2batchsize_lr5e-0520mar_reg/checkpoint-3000", device_map='auto')
+from huggingface_hub import login
+login(token="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")
+
+finetuned_model = AutoModelForCausalLM.from_pretrained("vipinkatara/mLLM2_model", device_map='auto')
+tokenizer = AutoTokenizer.from_pretrained("vipinkatara/mLLM2_model", device_map='auto')
 
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
