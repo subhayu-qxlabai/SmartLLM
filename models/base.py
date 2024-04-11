@@ -5,6 +5,17 @@ from pydantic import BaseModel
 
 IncEx: typing_extensions.TypeAlias = 'set[int] | set[str] | dict[int, Any] | dict[str, Any] | None'
 
+def try_load_model(model: BaseModel, val):
+    try:
+        if isinstance(val, model):
+            return model.model_validate(val)
+        elif isinstance(val, str):
+            return model.model_validate_json(val)
+        elif isinstance(val, dict):
+            return model.model_validate(val)
+    except Exception as e:
+        return val
+
 class CustomBaseModel(BaseModel):
     """Usage docs: https://docs.pydantic.dev/2.5/concepts/models/
 
@@ -121,4 +132,23 @@ class CustomBaseModel(BaseModel):
             warnings=warnings
         )
         
-    
+    @classmethod
+    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False):
+        """
+        A method to try to validate a model with the given value.
+
+        Args:
+            val: The value to validate the model with.
+            verbose: A boolean indicating whether to print error messages.
+            none_on_fail: A boolean indicating whether to return None on failure.
+        
+        Returns:
+            The validated model if successful, None if validation fails and none_on_fail is True, else the original value.
+        """
+        try:
+            m: cls = try_load_model(cls, val)
+            return m
+        except Exception as e:
+            if verbose:
+                print(f"Failed to load model: {e}")
+            return None if none_on_fail else val

@@ -4,10 +4,9 @@ import uuid
 import random
 from enum import Enum
 from pathlib import Path
-from pydantic import Field, root_validator
+from pydantic import root_validator
 from datasets import Dataset
-from tqdm import tqdm
-
+from typing_extensions import deprecated
 
 from config import SUPPORTED_LANGUAGES
 from helpers.utils import get_timestamp_uid, try_json_loads, run_parallel_exec, hash_uuid
@@ -32,19 +31,11 @@ UID_FUNCTION = lambda: get_timestamp_uid(make_uuid=True, local_timezone=True)
 UID_FUNCTION = uuid.uuid4
 DEFAULT_DATASET_DIR = Path("generated/dataset")
 
+PathType = str | Path
+ListPathType = list[PathType]
 
-def try_load_model(model: BaseModel, val):
-    try:
-        if isinstance(val, model):
-            return model.model_validate(val)
-        elif isinstance(val, str):
-            return model.model_validate_json(val)
-        elif isinstance(val, dict):
-            return model.model_validate(val)
-    except Exception as e:
-        return val
-    
-def get_language(path: str | Path):
+
+def get_language(path: PathType):
     return ([l for l in SUPPORTED_LANGUAGES if l in Path(path).as_posix()] or [None])[0]
 
 class LLMType(str, Enum):
@@ -84,15 +75,27 @@ class DatasetRow(BaseModel):
     @property
     def uid(self):
         return hash_uuid(self.hash_text)
+    
+    def to_parquet(self, dir: PathType = DEFAULT_DATASET_DIR):
+        d = self.to_alpaca()
+        if d is None:
+            return None
+        path = Path(dir) / f"{self.uid}.parquet"
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+        AlpacaMessagesList(messages_list=[d]).to_dataset().to_parquet(path.as_posix())
+        return path
 
-    def to_file(self, dir: str | Path = DEFAULT_DATASET_DIR):
+    @deprecated("Use `.to_parquet` method instead")
+    def to_file(self, dir: PathType = DEFAULT_DATASET_DIR):
         dump_file = Path(dir) / self.llm.value / f"{str(self.uid)}.json"
         dump_file.parent.mkdir(parents=True, exist_ok=True)
         dump_file.write_text(self.model_dump_json())
         return dump_file
 
     @classmethod
-    def from_file(cls, file: str | Path, log_errors = True, language: str = None):
+    @deprecated("Use `.from_parquet` method instead")
+    def from_file(cls, file: PathType, log_errors = True, language: str = None):
         try:
             m = cls.model_validate_json(Path(file).read_text())
             default_lang = DatasetRow.model_fields['language'].default
@@ -102,13 +105,32 @@ class DatasetRow(BaseModel):
         except Exception as e:
             if log_errors:
                 print(e)
+    
+    @classmethod
+    def from_parquet(cls, path_or_paths: PathType | ListPathType):
+        path_or_paths = (
+            path_or_paths 
+            if isinstance(path_or_paths, (list, tuple)) 
+            else [path_or_paths]
+        )
+        path_or_paths = [Path(x).as_posix() for x in path_or_paths]
+        rows: list[cls|None] = [
+            cls.try_model_validate(x, none_on_fail=True) 
+            for x in Dataset.from_parquet(path_or_paths)
+        ]
+        return [row for row in rows if row is not None]
 
     @classmethod
-    def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
+    def from_dir(cls, dir: PathType = DEFAULT_DATASET_DIR, log_errors=True):
         dir = Path(dir)
         language = get_language(dir)
         dump_files = list(dir.rglob("*.json"))
-        rows = [cls.from_file(file, log_errors, language) for file in dump_files]
+        parquet_files = list(dir.rglob("*.parquet"))
+        rows: list[cls] = []
+        if dump_files:
+            rows += [cls.from_file(file, log_errors, language) for file in dump_files]
+        if parquet_files:
+            rows += cls.from_parquet(parquet_files)
         return [row for row in rows if row is not None]
     
     def to_alpaca(self):
@@ -122,21 +144,14 @@ class DatasetRow(BaseModel):
             output=self.output,
         )
     
-    @classmethod
-    def try_model_validate(cls, val, verbose: bool = True, none_on_fail: bool = False):
-        try:
-            m: cls = try_load_model(cls, val)
-            return m
-        except Exception as e:
-            if verbose:
-                print(f"Failed to load model: {e}")
-            return None if none_on_fail else val
-    
     def __hash__(self):
         return self.uid.int
     
     def __repr__(self):
         return f"{self.__class__.__name__}(llm={self.llm}, language={self.language}, system={self.system}, input={self.input}, output={self.output})"
+    
+    def __str__(self):
+        return self.__repr__()
 
 
 class LLM1DatasetRow(DatasetRow):
@@ -148,8 +163,8 @@ class LLM1DatasetRow(DatasetRow):
     def validate(cls, values: dict|BaseModel):
         if isinstance(values, BaseModel):
             values = values.model_dump()
-        values["input"] = try_load_model(Question, values["input"])
-        values["output"] = try_load_model(QuestionSplit, values["output"])
+        values["input"] = Question.try_model_validate(values["input"])
+        values["output"] = QuestionSplit.try_model_validate(values["output"])
         return values
 
 
@@ -162,8 +177,8 @@ class LLM2DatasetRow(DatasetRow):
     def validate(cls, values: dict|BaseModel):
         if isinstance(values, BaseModel):
             values = values.model_dump()
-        values["input"] = try_load_model(StepsInput, values["input"])
-        values["output"] = try_load_model(StepsOutput, values["output"])
+        values["input"] = StepsInput.try_model_validate(values["input"])
+        values["output"] = StepsOutput.try_model_validate(values["output"])
         return values
 
 
@@ -176,12 +191,14 @@ class LLM3DatasetRow(DatasetRow):
     def validate(cls, values: dict|BaseModel):
         if isinstance(values, BaseModel):
             values = values.model_dump()
-        values["input"] = try_load_model(ExtractorInput, values["input"])
+        values["input"] = ExtractorInput.try_model_validate(values["input"])
         values["output"] = try_json_loads(values["output"], default_return={})
         return values
 
 
 def llm_row_factory(llm_type: LLMType):
+    if isinstance(llm_type, str):
+        llm_type = LLMType.from_substr(llm_type)
     match llm_type:
         case LLMType.LLM1:
             return LLM1DatasetRow
@@ -199,15 +216,19 @@ class LLMDatasetBase(BaseModel):
     @property
     def languages(self):
         return set([row.language for row in self.rows])
+    
+    @property
+    def llms(self):
+        return set([row.llm for row in self.rows])
 
-    def to_dir(self, dir: str | Path = DEFAULT_DATASET_DIR):
-        return [row.to_file(dir) for row in self.rows]
+    def to_dir(self, dir: PathType = DEFAULT_DATASET_DIR):
+        return [row.to_parquet(dir) for row in self.rows]
     
     def get_llm(self, llm_type: LLMType):
         return self.__class__(rows=[row for row in self.rows if row.llm == llm_type])
 
     @classmethod
-    def from_dir(cls, dir: str | Path = DEFAULT_DATASET_DIR, log_errors=True):
+    def from_dir(cls, dir: PathType = DEFAULT_DATASET_DIR, log_errors=True):
         return cls(rows=DatasetRow.from_dir(dir, log_errors))
 
     def to_messages(self, fmt: ConversationFormat = ConversationFormat.alpaca):
@@ -234,16 +255,17 @@ class LLMDatasetBase(BaseModel):
             return m_list
         raise NotImplementedError(f"Unsupported format: {fmt}")
     
-    def to_file(self, file: str | Path = "all.json", dir: str | Path = DEFAULT_DATASET_DIR):
+    @deprecated("Use `.to_parquet` method instead")
+    def to_file(self, file: PathType = "all.json", dir: PathType = DEFAULT_DATASET_DIR):
         print(f"Dumped {len(self.rows)} rows to {(Path(dir) / file).absolute().as_posix()!r}")
         (Path(dir) / file).write_text(self.model_dump_json())
 
     @classmethod
     def from_file(
         cls, 
-        file: str | Path = "all.json", 
-        dir: str | Path = DEFAULT_DATASET_DIR, 
-        full_path: str | Path = None,
+        file: PathType = "all.json", 
+        dir: PathType = DEFAULT_DATASET_DIR, 
+        full_path: PathType = None,
         log_errors = True,
     ):
         full_path = Path(full_path) if full_path else Path(dir) / file
@@ -262,18 +284,18 @@ class LLMDatasetBase(BaseModel):
     @classmethod
     def from_files(
         cls, 
-        files: list[str | Path] = [],
-        dir: str | Path = None,
+        files: list[PathType] = [],
+        dir: PathType = None,
         log_errors = True,
         threads = 4,
     ):
         from_file_fp = partial(cls.from_file, None, None, log_errors=log_errors)
         if dir is None:
-            data: list[tuple[str | Path, LLMDatasetBase]] = run_parallel_exec(
+            data: list[tuple[PathType, LLMDatasetBase]] = run_parallel_exec(
                 from_file_fp, set(files), quiet=not log_errors, max_workers=threads
             )
         else:
-            data: list[tuple[str | Path, LLMDatasetBase]] = run_parallel_exec(
+            data: list[tuple[PathType, LLMDatasetBase]] = run_parallel_exec(
                 cls.from_file, set(files), dir, None, log_errors, quiet=not log_errors, max_workers=threads
             )
         data = [x[1].rows for x in data if isinstance(x[1], cls)]
@@ -302,7 +324,7 @@ class LLMDatasetBase(BaseModel):
         )
     
     @classmethod
-    def from_messages(cls, messages: AlpacaMessagesList, llm_type: LLMType, strict: bool = False):
+    def from_messages(cls, messages: AlpacaMessagesList, strict: bool = False):
         vals = [
             {
                 "llm": x.llm,
@@ -315,23 +337,24 @@ class LLMDatasetBase(BaseModel):
         ]
         if strict:
             rows = [
-                llm_row_factory(llm_type).try_model_validate(val=x, none_on_fail=True)
+                llm_row_factory(x["llm"]).try_model_validate(val=x, none_on_fail=True)
                 for x in vals
             ]
         else:
-            rows = [DatasetRow(**x | {"llm": llm_type.value}) for x in vals]
+            rows = [DatasetRow(**x | {"llm": x["llm"]}) for x in vals]
         return cls(
             rows=[
                 x for x in rows if None not in [x, getattr(x, "input", None), getattr(x, "output", None)]
             ]
         )
-
-    @classmethod
-    def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
-        return cls.from_messages(AlpacaMessagesList.from_dataset(d), llm_type, strict)
     
     @classmethod
-    def from_jsonl(cls, jsonl_file: str | Path, llm_type: LLMType = None, strict: bool = False):
+    def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
+        return cls.from_messages(AlpacaMessagesList.from_dataset(d), strict)
+    
+    @classmethod
+    @deprecated("Use `.from_parquet` instead")
+    def from_jsonl(cls, jsonl_file: PathType, llm_type: LLMType = None, strict: bool = False):
         jsonl_file = Path(jsonl_file)
         assert jsonl_file.exists(), f"File {jsonl_file!r} does not exist"
         if llm_type is None:
@@ -343,6 +366,24 @@ class LLMDatasetBase(BaseModel):
             if language not in [None, default_lang] and m.language == default_lang:
                 m.language = language
         return d
+    
+    @classmethod
+    def from_parquet(cls, path_or_paths: PathType | ListPathType):
+        path_or_paths = (
+            path_or_paths 
+            if isinstance(path_or_paths, (list, tuple)) 
+            else [path_or_paths]
+        )
+        path_or_paths = [Path(x).as_posix() for x in path_or_paths]
+        return cls.from_messages(AlpacaMessagesList.from_dataset(Dataset.from_parquet(path_or_paths)))
+    
+    def to_parquet(self, path: PathType):
+        return (
+            self
+            .to_messages(ConversationFormat.alpaca)
+            .to_dataset()
+            .to_parquet(str(path))
+        )
 
     def page(self, page_size: int = 10, offset: int = 0):
         return self.__class__(rows=self.rows[offset:offset+page_size])

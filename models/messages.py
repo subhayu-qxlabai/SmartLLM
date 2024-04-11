@@ -4,6 +4,7 @@ from typing import Any
 from pathlib import Path
 from random import choice
 from functools import partial
+from typing_extensions import deprecated
 
 from datasets import Dataset
 from pydantic import root_validator
@@ -176,12 +177,23 @@ class BaseMessagesList(BaseModel):
         return cls(messages_list=[d_type(**x) for x in d.to_list()])
 
     @classmethod
+    @deprecated("Use `.from_parquet` instead")
     def from_jsonl(cls, jsonl_file: str | Path, llm: str | None = None, verbose: bool = False):
         try:
             d = Dataset.from_json(str(jsonl_file))
         except Exception as e:
             if verbose:
                 print(f"Error loading jsonl: {e}")
+            return cls()
+        return cls.from_dataset(d, llm)
+    
+    @classmethod
+    def from_parquet(cls, parquet_file: str | Path, llm: str | None = None, verbose: bool = False):
+        try:
+            d = Dataset.from_parquet(str(parquet_file))
+        except Exception as e:
+            if verbose:
+                print(f"Error loading parquet: {e}")
             return cls()
         return cls.from_dataset(d, llm)
 

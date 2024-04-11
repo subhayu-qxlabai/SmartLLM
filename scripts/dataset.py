@@ -165,13 +165,14 @@ def generate(
     except KeyboardInterrupt:
         typer.echo("Interrupted!")
     finally:
-        d = LLMDataset.from_dir(dump_dir, log_errors=not quiet)
+        parquet_files = [x.as_posix() for x in Path(dump_dir).rglob("*.parquet")]
+        d = Dataset.from_parquet(parquet_files, log_errors=not quiet)
         dump_file = Path(dump_dir).parent / f"{language}.json"
-        d.to_file(file=dump_file.name, dir=dump_file.parent)
+        d.to_parquet(dump_file)
         typer.echo(f"Dumped dataset to file: {dump_file}")
         if upload:
             upload_dataset(dump_file, language)
-            
+    
 
 def get_dataset_map(
     source: str | Path, quiet=False, split_by_llm=True, validate_schema=True

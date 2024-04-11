@@ -10,7 +10,7 @@ from dataset_gen.smart_llm.split_generator import QuestionSplitGenerator
 from dataset_gen.smart_llm.step_input_generator import StepInputGenerator
 from dataset_gen.smart_llm.step_output_generator import StepOutputGenerator
 from dataset_gen.smart_llm.extract_generator import ExtractGenerator
-from helpers.utils import run_parallel_exec_but_return_in_order
+from helpers.utils import get_ts_filename, run_parallel_exec_but_return_in_order
 from helpers.vectorstore.faisser import FaissDB
 from models.generic import QuestionSplit
 from models.llm_dataset import (
@@ -192,7 +192,7 @@ class DatasetGenerator:
         self._add_generated_topic(topic)
         rows = self._generate_rows(topic, multiplier, language)
         if self.dump_rows:
-            [row.to_file(dir=self.dump_dir) for row in rows]
+            [row.to_parquet(dir=self.dump_dir) for row in rows]
         else:
             self.dataset.rows.extend(rows)
         return rows
@@ -250,7 +250,9 @@ class DatasetGenerator:
         return generated
 
     def dump(self):
-        return self.dataset.to_dir(self.dump_dir)
+        return self.dataset.to_parquet(
+            self.dump_dir / get_ts_filename("dataset.parquet", add_random=False)
+        )
 
 
 if __name__ == "__main__":
