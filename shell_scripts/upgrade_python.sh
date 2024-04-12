@@ -6,28 +6,22 @@ PYTHON_NEW_VERSION="3.11"
 PYTHON_OLD_VERSION=$(python3 --version | cut -d " " -f 2)
 DEADSNAKES_REPO="ppa:deadsnakes/ppa"
 
-# Function to check Python version
-check_python_version() {
-    echo "Current Python version:"
-    python3 --version
-}
-
 # Function to update system and add deadsnakes repository
 update_system_and_repository() {
     echo "Updating system and adding deadsnakes repository..."
-    sudo apt update && sudo apt upgrade -y
+    sudo apt update -y && sudo apt upgrade -y
     sudo add-apt-repository -y $DEADSNAKES_REPO
-    sudo apt update
+    sudo apt update -y
 }
 
 # Function to check if Python new version is available
 check_python_new() {
     echo "Checking if Python $PYTHON_NEW_VERSION is available..."
-    if apt list | grep -q python$PYTHON_NEW_VERSION; then
-        echo "Python $PYTHON_NEW_VERSION is available for installation."
+    if apt list --installed | grep -q python$PYTHON_NEW_VERSION; then
+        echo "Python $PYTHON_NEW_VERSION is already installed. Exiting..."
+        exit 0
     else
-        echo "Python $PYTHON_NEW_VERSION is not available."
-        exit 1
+        echo "Python $PYTHON_NEW_VERSION is not installed."
     fi
 }
 
@@ -39,7 +33,7 @@ install_python_new() {
 
 # Function to run Python new version
 run_python_new() {
-    echo "Running Python $PYTHON_NEW_VERSION:"
+    echo "Running Python $PYTHON_NEW_VERSION..."
     python$PYTHON_NEW_VERSION --version
 }
 
@@ -71,22 +65,21 @@ fix_pip_and_distutils_errors() {
     echo "Fixing pip and distutils errors..."
     sudo apt remove --purge -y python3-apt
     sudo apt autoclean
+    sudo apt install -y curl
     sudo apt install -y python3-apt
     sudo apt install -y python$PYTHON_NEW_VERSION-distutils
     curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
     sudo python$PYTHON_NEW_VERSION get-pip.py
-    sudo apt install -y curl
     sudo apt install -y python$PYTHON_NEW_VERSION-venv
 }
 
 # Main script
-check_python_version
-update_system_and_repository
 check_python_new
+update_system_and_repository
 install_python_new
 run_python_new
-create_and_activate_virtualenv
-set_python_aliases
+# create_and_activate_virtualenv
+# set_python_aliases
 # set_default_python_new # can disrupt some OS packages that rely on Python 3.8
 fix_pip_and_distutils_errors
 
