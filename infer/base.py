@@ -2,7 +2,10 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
 )
+from huggingface_hub import login
+
 from helpers.text_utils import TextUtils
+
 
 class InferBase:
     def __init__(
@@ -17,7 +20,11 @@ class InferBase:
             "use_cache": False, 
         },
         model_kwargs: dict = {},
+        hf_token: str = None,
     ):
+        if hf_token is not None:
+            login(token=hf_token)
+        
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         if tokenizer is None:
             self.tokenizer = AutoTokenizer.from_pretrained(
@@ -32,7 +39,7 @@ class InferBase:
         else:
             self.model = model
 
-    def infer(
+    def _infer(
         self, 
         input_text: str, 
         encoder_kwargs: dict = {
@@ -53,6 +60,9 @@ class InferBase:
         decoded_output = self.tokenizer.batch_decode(generated_ids, **decoder_kwargs)
         decoded_output: str = decoded_output[0]
         return TextUtils.get_middle_text(decoded_output, input_text, self.tokenizer.eos_token)
+    
+    def infer(self, input_text: str):
+        return self._infer(input_text)
 
-    def __call__(self, input_text: str, *args, **kwargs):
-        return self.infer(input_text, *args, **kwargs)
+    def __call__(self, input_text: str):
+        return self.infer(input_text)
