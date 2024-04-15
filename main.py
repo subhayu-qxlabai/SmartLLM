@@ -9,8 +9,7 @@ from models.generic import QuestionSplit
 from models.inputs import StepsInput, Function
 from models.outputs import StepsOutput
 from step_runner import StepRunner
-from infer.generic import ask_llm
-from infer import InferLLM1, InferLLM2
+from infer import InferLLM1, InferLLM2, InferGeneric
 from helpers.middleware import ProcessTimeMiddleware
 from helpers.utils import get_ts_filename, remove_special_chars
 from pathlib import Path
@@ -48,7 +47,7 @@ async def process_question(question: str = Query(..., title="User Question")):
         raise HTTPException(status_code=400, detail="Failed to split the question")
 
     if split.can_i_answer:
-        answer = ask_llm(question)
+        answer = InferGeneric().infer(question)
         if not unanswered_regex.search(answer):
             print(f"{split=}")
             return QA(
