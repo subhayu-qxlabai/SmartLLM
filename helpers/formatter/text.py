@@ -1,12 +1,9 @@
-import pandas as pd
-
 from helpers.formatter.messages import MessagesFormatter
 
 
-class AlpacaFormatter(MessagesFormatter):
+class TextFormatter(MessagesFormatter):
     def __init__(
         self,
-        messages: list[dict[str, str]],
         system_template: str = "<<SYS>> {system} <<SYS>>",
         user_template: str = "[INST] {user} [/INST]",
         assistant_template: str = "{assistant}",
@@ -14,14 +11,12 @@ class AlpacaFormatter(MessagesFormatter):
         user_key: str = "user",
         assistant_key: str = "assistant",
         separator: str = " ",
-        message_role_field: str = "role",
-        message_content_field: str = "content",
     ):
         self.system_key = system_key
         self.user_key = user_key
         self.assistant_key = assistant_key
         self._keys = [system_key, user_key, assistant_key]
-        messages: list[list[dict[str, str]]] = self._alpaca_to_messages(messages)
+        messages: list[list[dict[str, str]]] = []
         super().__init__(
             messages,
             system_template,
@@ -31,17 +26,15 @@ class AlpacaFormatter(MessagesFormatter):
             user_key,
             assistant_key,
             separator,
-            message_role_field,
-            message_content_field,
+            "role",
+            "content",
         )
         
-    def _alpaca_to_messages(self, messages: list[dict[str, str]]):
-        return [
-            [
-                {"role": key, "content": m.get(key)}
-                for key in self._keys if key in m
-            ]
-            for m in messages 
-            if m.get(self.user_key) or m.get(self.system_key)
-        ]
+    def format_text(self, system: str, user: str, assistant: str) -> str:
+        self.messages = [[
+            {"role": self.system_key, "content": system},
+            {"role": self.user_key, "content": user},
+            {"role": self.assistant_key, "content": assistant},
+        ]]
+        return self.format().formatted_messages[-1]
     
