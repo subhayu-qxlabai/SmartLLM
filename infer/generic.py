@@ -1,26 +1,20 @@
-import re
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from infer.base import InferBase
+from helpers.formatter.text import TextFormatter
 
-device = "cuda" # the device to load the model onto
 
-# MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
-MODEL_NAME = "bigscience/bloom-7b1"
+class InferGeneric(InferBase):
+    def __init__(self, formatter: TextFormatter = None):
+        super().__init__(
+            pretrained_model_name_or_path="bigscience/bloom-7b1",
+        )
+        self.formatter = formatter or TextFormatter()
 
-model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-
-def ask_llm(question: str):
-    messages = [
-        {"role": "user", "content": question},
-    ]
-    
-    encodeds = tokenizer.apply_chat_template(messages, return_tensors="pt")
-    
-    model_inputs = encodeds.to(device)
-    model.to(device)
-    
-    generated_ids = model.generate(model_inputs, max_new_tokens=1000, do_sample=True)
-    decoded = tokenizer.batch_decode(generated_ids)
-    response = re.findall(r"\[\/INST\]\s*(.*)<\/s>", decoded[0], re.DOTALL) or [decoded[0]]
-    return response[0]
-    
+    def infer(self, request: str, include_system: bool = False):
+        request_str: str = self.tokenizer.apply_chat_template(
+            [
+                {"role": "user", "content": request}
+            ], 
+            tokenize=False
+        )
+        return self._infer(request_str)
+        
