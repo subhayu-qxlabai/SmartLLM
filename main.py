@@ -56,11 +56,11 @@ async def process_question(question: str = Query(..., title="User Question")):
                 answer=answer,
             )
     
-    function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split['tasks']+[question, "llm"]]))
+    function_docs = list(chain(*[vdb.similarity_search(task, k=3) for task in split.tasks+[question, "llm"]]))
     # print(function_docs)
     functions = set([Function.model_validate(doc.metadata) for doc in function_docs])
     # print(f"{functions=}\n")
-    input_schema = StepsInput(query=split['question'], steps=split['tasks'], functions=functions)
+    input_schema = StepsInput(query=split.question, steps=split.tasks, functions=functions)
     
     step_output = InferLLM2().infer(input_schema)
     print(f"{step_output=}\n")
