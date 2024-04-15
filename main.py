@@ -10,8 +10,7 @@ from models.inputs import StepsInput, Function
 from models.outputs import StepsOutput
 from step_runner import StepRunner
 from infer.generic import ask_llm
-from infer.steps_generator import get_steps
-from infer.question_breaker import break_question
+from infer import InferLLM1, InferLLM2
 from helpers.middleware import ProcessTimeMiddleware
 from helpers.utils import get_ts_filename, remove_special_chars
 from pathlib import Path
@@ -42,11 +41,11 @@ class OutModel(BaseModel):
 @app.get("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
     # print(question)
-    split: QuestionSplit = break_question(question).output
+    split: QuestionSplit = InferLLM1().infer(question).output
     print(f"{split=}\n")
 
-    # if not isinstance(split, QuestionSplit):
-    #     raise HTTPException(status_code=400, detail="Failed to split the question")
+    if not isinstance(split, QuestionSplit):
+        raise HTTPException(status_code=400, detail="Failed to split the question")
 
     if split.can_i_answer:
         answer = ask_llm(question)
@@ -63,7 +62,7 @@ async def process_question(question: str = Query(..., title="User Question")):
     # print(f"{functions=}\n")
     input_schema = StepsInput(query=split['question'], steps=split['tasks'], functions=functions)
     
-    step_output: StepsOutput = get_steps(input_schema)
+    step_output = InferLLM2().infer(input_schema)
     print(f"{step_output=}\n")
 
     if not isinstance(step_output, StepsOutput):

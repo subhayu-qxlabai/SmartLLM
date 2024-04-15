@@ -1,15 +1,14 @@
 import re
 import json
 import pickle
-from typing import Any
 from random import randint
 from functools import partial
 
 from helpers.utils import get_nested_value, set_nested_value
 from models.outputs import StepsOutput, Step, ExtractEntry
-from models.extractor import ExtractorInput
 from helpers.call_openai import call_openai_api
-from infer.extractor import extract_contexts
+from models.extractor import ExtractorInput
+from infer import InferLLM3
 import apis_scripts
 
 
@@ -138,7 +137,7 @@ class StepRunner:
             for x in _e.context
         ]
         # Call 3rd LLM to extract data from context and return the filled schema
-        extracted_data: dict[str, Any] = extract_contexts(ExtractorInput(**e))
+        extracted_data = self.llm3.infer(ExtractorInput(**e))
         # # extracted_data = {x.name: f"'{x.name}-VALUE'" for x in _e.schema}
         return extracted_data
 
@@ -162,6 +161,7 @@ class StepRunner:
 
     def run_steps(self):
         # print(f"{self.steps=}")
+        self.llm3 = InferLLM3()
         for step in self.steps:
             step_dump = step.model_dump(mode="json")
             funcs_cxts = self.step_extract_pattern.findall(str(step_dump["function"]))
@@ -179,7 +179,7 @@ class StepRunner:
             else:
                 self.run_extracts(step)
                 self.run_functions(step)
-
+        del self.llm3
         return self.context_dict
 
 
