@@ -61,8 +61,8 @@ class InferBase:
         decoded_output: str = decoded_output[0]
         return TextUtils.get_middle_text(decoded_output, input_text, self.tokenizer.eos_token)
     
-    def infer(self, input_text: str):
-        return self._infer(input_text)
+    def infer(self, request: str, include_system: bool = True):
+        return self._infer(request)
 
     def __call__(self, input_text: str):
         return self.infer(input_text)

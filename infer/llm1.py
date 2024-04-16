@@ -35,8 +35,9 @@ class InferLLM1(InferBase):
         "Serving as an authentic and insightful assistant capable of simplifying inquiries into easy-to-follow steps, you are presented with a JSON input question. You must return a JSON object as a response, which includes two fields: can_i_answer (to be marked true if the question is solvable using internal assets, or false if it necessitates external resources) and tasks, detailing the steps needed to answer the question utilizing external resources whenever can_i_answer is false.",
     ]
 
-    def __init__(self, formatter: TextFormatter = None):
+    def __init__(self, formatter: TextFormatter = None, use_cache: bool = True):
         super().__init__(
+            model_kwargs={"use_cache": use_cache},
             pretrained_model_name_or_path="vipinkatara/mLLM1_model",
             hf_token="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",
         )

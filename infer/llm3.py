@@ -22,8 +22,9 @@ class InferLLM3(InferBase):
         "You need to work as an extractor. Given a JSON input structure comprising 'schema' and 'context' fields, your task is to skillfully extract pertinent information as per the defined schema and contextual cues. Generate an output JSON containing the extracted key-value pairs. Your capability should extend to diverse input structures, demonstrating proficiency akin to the provided examples showcasing various schema and context scenarios."
     ]
 
-    def __init__(self, formatter: TextFormatter = None):
+    def __init__(self, formatter: TextFormatter = None, use_cache: bool = True):
         super().__init__(
+            model_kwargs={"use_cache": use_cache},
             pretrained_model_name_or_path="vipinkatara/mLLM3_model",
             hf_token="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",
         )

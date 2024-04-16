@@ -31,10 +31,11 @@ class InferLLM2(InferBase):
         "Your responsibility is to compile a sequence of logical steps for achieving tasks. Actual function execution is not needed, and the output format must strictly adhere to JSON.",
     ]
 
-    def __init__(self, formatter: TextFormatter = None):
+    def __init__(self, formatter: TextFormatter = None, use_cache: bool = True):
         super().__init__(
-            pretrained_model_name_or_path="vipinkatara/mLLM2_model",
-            hf_token="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",
+            model_kwargs={"use_cache": use_cache},
+            pretrained_model_name_or_path="Divyanshu04/LLM2",
+            hf_token="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",
         )
         self.formatter = formatter or TextFormatter()
 
