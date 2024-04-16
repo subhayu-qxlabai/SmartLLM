@@ -1,5 +1,4 @@
 import re
-import json
 from itertools import chain
 from pydantic import BaseModel, ValidationError
 from fastapi import FastAPI, HTTPException, Query
@@ -39,7 +38,6 @@ class OutModel(BaseModel):
 
 @app.get("/process_question", response_model=OutModel|QA)
 async def process_question(question: str = Query(..., title="User Question")):
-    # print(question)
     split: QuestionSplit = InferLLM1().infer(question).output
     print(f"{split=}\n")
 
