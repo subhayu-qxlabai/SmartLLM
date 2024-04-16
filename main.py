@@ -33,7 +33,7 @@ class OutModel(BaseModel):
     steps_input: StepsInput | str | None = None
     steps_output: StepsOutput | str | None = None
     context_dict: dict | None = None
-    response: str | None = None
+    response: str | list | dict | None = None
     
 
 @app.get("/process_question", response_model=OutModel|QA)
