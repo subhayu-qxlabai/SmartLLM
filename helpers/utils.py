@@ -154,7 +154,7 @@ def try_json_dumps(data: dict | list, indent=None):
     try:
         return json.dumps(data, indent=indent)
     except:
-        return ""
+        return str(data)
 
 def try_json_dump(data: dict | list, filename: str, indent=None):
     open(filename, "w", encoding="utf-8").write(try_json_dumps(data, indent))

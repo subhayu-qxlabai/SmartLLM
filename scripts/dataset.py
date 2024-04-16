@@ -103,7 +103,7 @@ def generate(
         help="Path to the topics file. Must be a JSON array of strings.",
     ),
     language: str = typer.Option(
-        "en", "--language", "-l", help="Language of the dataset"
+        "english", "--language", "-l", help="Language of the dataset"
     ),
     multiplier: int = typer.Option(
         1,
