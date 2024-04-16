@@ -1,0 +1,462 @@
+[
+    {
+        "name": "TWITTER",
+        "description": "Performs a Twitter search query and returns relevant results.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "query",
+                    "type": "string",
+                    "description": "The Twitter search query to be performed."
+                },
+                {
+                    "name": "num_results",
+                    "type": "number",
+                    "description": "The number of results to be returned. Default is 10."
+                }
+            ],
+            "required": [
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "TEXT_TO_IMAGE",
+        "description": "Converts the provided text into an image and returns the URL of the generated image.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "text",
+                    "type": "string",
+                    "description": "The text to be converted into an image."
+                },
+                {
+                    "name": "font",
+                    "type": "string",
+                    "description": "The font to be used for the text. Default is Arial."
+                },
+                {
+                    "name": "font_size",
+                    "type": "number",
+                    "description": "The font size to be used. Default is 12."
+                },
+                {
+                    "name": "background_color",
+                    "type": "string",
+                    "description": "The background color of the image. Default is white."
+                },
+                {
+                    "name": "text_color",
+                    "type": "string",
+                    "description": "The color of the text. Default is black."
+                }
+            ],
+            "required": [
+                "text"
+            ]
+        }
+    },
+    {
+        "name": "TRANSLATION",
+        "description": "Translates text from one language to another.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "text",
+                    "type": "string",
+                    "description": "The text to be translated."
+                },
+                {
+                    "name": "source_language",
+                    "type": "string",
+                    "description": "The source language of the text. If not provided, it will be detected automatically."
+                },
+                {
+                    "name": "target_language",
+                    "type": "string",
+                    "description": "The target language to translate the text into."
+                }
+            ],
+            "required": [
+                "text",
+                "target_language"
+            ]
+        }
+    },
+    {
+        "name": "TRANSCRIPTION",
+        "description": "Converts audio or video files into text by transcribing spoken words.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "audio_file",
+                    "type": "string",
+                    "description": "The path or URL to the audio or video file to be transcribed."
+                },
+                {
+                    "name": "language",
+                    "type": "string",
+                    "description": "The language spoken in the audio or video file. Default is English."
+                },
+                {
+                    "name": "output_format",
+                    "type": "string",
+                    "description": "The format of the transcription output. Default is plain text."
+                }
+            ],
+            "required": [
+                "audio_file"
+            ]
+        }
+    },
+    {
+        "name": "CODE_INTERPRETER",
+        "description": "Interprets and executes code written in a specific programming language.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "code",
+                    "type": "string",
+                    "description": "The code to be interpreted and executed."
+                },
+                {
+                    "name": "language",
+                    "type": "string",
+                    "description": "The programming language of the code."
+                }
+            ],
+            "required": [
+                "code",
+                "language"
+            ]
+        }
+    },
+    {
+        "name": "GOOGLE_MAPS",
+        "description": "Interacts with Google Maps API to perform various location-based operations.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "action",
+                    "type": "string",
+                    "description": "The action to be performed (e.g., 'search', 'get_directions')."
+                },
+                {
+                    "name": "query",
+                    "type": "string",
+                    "description": "The location or query relevant to the chosen action."
+                },
+                {
+                    "name": "options",
+                    "type": "object",
+                    "description": "Additional options or parameters specific to the chosen action."
+                }
+            ],
+            "required": [
+                "action",
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "GOOGLE_FLIGHT",
+        "description": "Utilizes Google Flight API to retrieve information about flights and related details.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "action",
+                    "type": "string",
+                    "description": "The action to be performed (e.g., 'search', 'get_details')."
+                },
+                {
+                    "name": "query",
+                    "type": "object",
+                    "description": "The query parameters relevant to the chosen action."
+                },
+                {
+                    "name": "options",
+                    "type": "object",
+                    "description": "Additional options or parameters specific to the chosen action."
+                }
+            ],
+            "required": [
+                "action",
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "YOUTUBE",
+        "description": "Interacts with YouTube API to perform various operations related to videos and channels.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "action",
+                    "type": "string",
+                    "description": "The action to be performed (e.g., 'search_videos', 'get_channel_info')."
+                },
+                {
+                    "name": "query",
+                    "type": "object",
+                    "description": "The query parameters relevant to the chosen action."
+                },
+                {
+                    "name": "options",
+                    "type": "object",
+                    "description": "Additional options or parameters specific to the chosen action."
+                }
+            ],
+            "required": [
+                "action",
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "TEXT_TO_SPEECH",
+        "description": "Converts text into speech (audio).",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "text",
+                    "type": "string",
+                    "description": "The text to be converted into speech."
+                },
+                {
+                    "name": "language",
+                    "type": "string",
+                    "description": "The language in which the text is spoken. Default is English."
+                },
+                {
+                    "name": "voice",
+                    "type": "string",
+                    "description": "The specific voice to be used for speech synthesis."
+                },
+                {
+                    "name": "output_format",
+                    "type": "string",
+                    "description": "The format of the output audio. Default is MP3."
+                },
+                {
+                    "name": "speed",
+                    "type": "number",
+                    "description": "The speed of speech synthesis. Default is 1.0 (normal speed)."
+                }
+            ],
+            "required": [
+                "text"
+            ]
+        }
+    },
+    {
+        "name": "SPEECH_TO_TEXT",
+        "description": "Converts speech (audio) into text.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "audio_file",
+                    "type": "string",
+                    "description": "The path or URL to the audio file containing speech."
+                },
+                {
+                    "name": "language",
+                    "type": "string",
+                    "description": "The language spoken in the audio. Default is English."
+                },
+                {
+                    "name": "output_format",
+                    "type": "string",
+                    "description": "The format of the output text. Default is plain text."
+                }
+            ],
+            "required": [
+                "audio_file"
+            ]
+        }
+    },
+    {
+        "name": "URL_LIST_PROCESSOR",
+        "description": "Processes a list of URLs and performs a specified action.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "urls",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "A list of URLs to be processed."
+                },
+                {
+                    "name": "action",
+                    "type": "string",
+                    "description": "The action to be performed on the list of URLs (e.g., 'fetch_data', 'validate')."
+                },
+                {
+                    "name": "options",
+                    "type": "object",
+                    "description": "Additional options or parameters specific to the chosen action."
+                }
+            ],
+            "required": [
+                "urls",
+                "action"
+            ]
+        }
+    },
+    {
+        "name": "GOOGLE_PLACES",
+        "description": "Interacts with Google Places API to obtain information about places and locations.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "action",
+                    "type": "string",
+                    "description": "The action to be performed (e.g., 'search_places', 'get_place_details')."
+                },
+                {
+                    "name": "query",
+                    "type": "object",
+                    "description": "The query parameters relevant to the chosen action."
+                },
+                {
+                    "name": "options",
+                    "type": "object",
+                    "description": "Additional options or parameters specific to the chosen action."
+                }
+            ],
+            "required": [
+                "action",
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "IMAGE_SEARCH",
+        "description": "Performs an image search based on the provided query and returns multiple images.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "query",
+                    "type": "string",
+                    "description": "The query term to search for images."
+                },
+                {
+                    "name": "num_images",
+                    "type": "number",
+                    "description": "The number of images to return. Default is 10."
+                }
+            ],
+            "required": [
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "NEWS",
+        "description": "Retrieves the latest news articles from various sources.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "query",
+                    "type": "string",
+                    "description": "The query term to search for news articles. If not provided, retrieves top headlines."
+                },
+                {
+                    "name": "sources",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "An array of news sources to retrieve articles from. If not provided, articles will be fetched from various sources."
+                },
+                {
+                    "name": "language",
+                    "type": "string",
+                    "description": "The language in which to retrieve news articles. Default is English."
+                },
+                {
+                    "name": "num_articles",
+                    "type": "number",
+                    "description": "The number of articles to retrieve. Default is 10."
+                }
+            ],
+            "required": [
+                "query"
+            ]
+        }
+    },
+    {
+        "name": "LLM",
+        "description": "A large language model capable of understanding and generating human-like text based on input.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "text",
+                    "type": "string",
+                    "description": "The input text to be processed or generated."
+                },
+                {
+                    "name": "context",
+                    "type": "string",
+                    "description": "Optional context to provide additional information or constraints for text generation."
+                },
+                {
+                    "name": "temperature",
+                    "type": "number",
+                    "description": "The temperature parameter controlling the randomness of text generation. Default is 1.0."
+                },
+                {
+                    "name": "max_tokens",
+                    "type": "number",
+                    "description": "The maximum number of tokens (words or subwords) to generate. Default is 50."
+                },
+                {
+                    "name": "top_p",
+                    "type": "number",
+                    "description": "The top-p (nucleus) sampling parameter for text generation. Default is 1.0."
+                }
+            ],
+            "required": [
+                "text"
+            ]
+        }
+    },
+    {
+        "name": "SEARCH_ENGINE",
+        "description": "Performs a search query on the web and returns relevant results.",
+        "parameters": {
+            "type": "object",
+            "properties": [
+                {
+                    "name": "query",
+                    "type": "string",
+                    "description": "The search query to be performed."
+                },
+                {
+                    "name": "num_results",
+                    "type": "number",
+                    "description": "The number of results to be returned. Default is 10."
+                }
+            ],
+            "required": [
+                "query"
+            ]
+        }
+    }
+]

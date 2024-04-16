@@ -1,0 +1,19 @@
+input_file: /workspace/New_code/SmartLLM/eval_dataset_for_evaluation_metric/questions.json
+gold_standard_file: /workspace/New_code/SmartLLM/eval_dataset_for_evaluation_metric/gold_standards.json
+
+metrics:
+  accuracy:  # Overall correctness
+    # This calculates accuracy for both "can_i_answer" and "tasks" predictions
+    subtasks:
+      - key: can_i_answer
+      - key: tasks
+  precision:  # Proportion of positive predictions that are correct
+    subtasks:
+      - key: can_i_answer
+      - key: tasks
+  macro_f1:  # Considers variability in tasks with F1 score
+    subtasks:
+      - key: tasks
+  normalized_levenshtein_distance:  # Measure similarity between tasks lists
+    subtasks:
+      - key: tasks
