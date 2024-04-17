@@ -6,6 +6,7 @@ from random import shuffle
 import typer
 from datasets import Dataset, DatasetDict, load_dataset
 
+from config import DATASET_REPO, HUGGINGFACE_TOKEN
 from translators import DatasetTranslator
 from helpers.storage.s3client import S3Client
 from helpers.utils import (
@@ -323,7 +324,7 @@ def download_dataset(
         Path("dataset"), help="Directory to dump the dataset in"
     ),
     path: str = typer.Option(
-        "subhayu-qxlabai/SmartLLM",
+        DATASET_REPO,
         "--path",
         "-p",
         help="Path to the dataset on Hugging Face",
@@ -333,7 +334,7 @@ def download_dataset(
     ),
     add_ts: bool = typer.Option(False, help="Add timestamp suffix to the file name"),
 ):
-    hf_token = os.getenv("HF_TOKEN")
+    hf_token = HUGGINGFACE_TOKEN
     if hf_token:
         typer.echo(f"Using HF_TOKEN from environment variable")
     if not hf_token or not hf_token.startswith("hf_"):
@@ -353,16 +354,16 @@ def download_dataset(
             typer.echo(f"Dataset already exists at {path!r}! Skipping...")
             return
         typer.echo(f"Dumping dataset to {path!r}")
-        dst.to_json(path)
+        dst.to_parquet(path)
 
     if isinstance(dataset, DatasetDict):
         for s, d in dataset.items():
-            file_name: Path = dump_dir / f"{s}.jsonl"
+            file_name: Path = dump_dir / f"{s}.parquet"
             dump_if_missing(d, file_name)
     elif isinstance(dataset, Dataset):
         file_name = (
             dump_dir
-            / f'{typer.prompt("Enter file name for the dataset", value_proc=str)}.jsonl'
+            / f'{typer.prompt("Enter file name for the dataset", value_proc=str)}.parquet'
         )
         dump_if_missing(dataset, file_name)
 
