@@ -46,9 +46,8 @@ class InferLLM1(InferBase):
     def infer(self, request: str, include_system: bool = True):
         request = {"question": request}
         request = self.formatter.format_text(
-            choice(self.system_messages) if include_system else "", 
-            json.dumps(request), 
-            ""
+            system=choice(self.system_messages) if include_system else "", 
+            user=json.dumps(request), 
         )
         response = self._infer(request)
         try:

@@ -42,9 +42,8 @@ class InferLLM2(InferBase):
     def infer(self, request: StepsInput, include_system: bool = True):
         system = f"{choice(self.system_messages)}\n{json.dumps(StepsOutput.model_json_schema())}"
         request: str = self.formatter.format_text(
-            system if include_system else "", 
-            request.model_dump_json(), 
-            ""
+            system=system if include_system else "", 
+            user=request.model_dump_json(), 
         )
         response = self._infer(request)
         try:

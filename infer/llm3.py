@@ -32,9 +32,8 @@ class InferLLM3(InferBase):
 
     def infer(self, request: ExtractorInput, include_system: bool = True) -> dict[str, Any]:
         request_str = self.formatter.format_text(
-            choice(self.system_messages) if include_system else "", 
-            request.model_dump_json(), 
-            ""
+            system=choice(self.system_messages) if include_system else "", 
+            user=request.model_dump_json(), 
         )
         response = self._infer(request_str)
         try:
