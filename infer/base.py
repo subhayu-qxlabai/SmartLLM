@@ -21,6 +21,7 @@ class InferBase:
         },
         model_kwargs: dict = {},
         hf_token: str = None,
+        custom_end_token: str | None = None,
     ):
         if hf_token is not None:
             login(token=hf_token)
@@ -38,6 +39,10 @@ class InferBase:
             )
         else:
             self.model = model
+        
+        self.custom_end_token = custom_end_token
+        if not isinstance(custom_end_token, str):
+            self.custom_end_token = self.tokenizer.eos_token
 
     def _infer(
         self, 
@@ -51,6 +56,7 @@ class InferBase:
             "max_new_tokens": 8096,
             "do_sample": False,
         },
+        only_output_text: bool = True,
     ) -> str:
         encoded_input = self.tokenizer(input_text, **encoder_kwargs)
         model_inputs = encoded_input.to("cuda")
@@ -59,7 +65,9 @@ class InferBase:
         )
         decoded_output = self.tokenizer.batch_decode(generated_ids, **decoder_kwargs)
         decoded_output: str = decoded_output[0]
-        return TextUtils.get_middle_text(decoded_output, input_text, self.tokenizer.eos_token)
+        if not only_output_text:
+            return decoded_output
+        return TextUtils.get_middle_text(decoded_output, input_text, self.custom_end_token)
     
     def infer(self, request: str, include_system: bool = True):
         return self._infer(request)
