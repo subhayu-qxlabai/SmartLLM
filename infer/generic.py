@@ -5,8 +5,9 @@ from helpers.formatter.text import TextFormatter
 class InferGeneric(InferBase):
     def __init__(self, formatter: TextFormatter = None, use_cache: bool = True):
         super().__init__(
-            model_kwargs={"use_cache": use_cache},
             pretrained_model_name_or_path="mistralai/Mistral-7B-v0.1",
+            hf_token="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",
+            model_kwargs={"use_cache": use_cache},
         )
         self.formatter = formatter or TextFormatter()
 
