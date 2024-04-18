@@ -8,7 +8,7 @@ class InferGeneric(InferBase):
             model_kwargs={"use_cache": use_cache},
             pretrained_model_name_or_path="bigscience/bloom-7b1",
         )
-        self.formatter = formatter or TextFormatter(system_template="")
+        self.formatter = formatter or TextFormatter(system_template="<s> ", separator="")
 
     def infer(self, request: str, include_system: bool = False):
         request_str: str = self.formatter.format_text(user=request)
