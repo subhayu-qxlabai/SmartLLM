@@ -326,14 +326,8 @@ class LLMDatasetBase(BaseModel):
     @classmethod
     def from_messages(cls, messages: AlpacaMessagesList, strict: bool = False):
         vals = [
-            {
-                "llm": x.llm,
-                "language": x.language,
-                "system": x.system,
-                "input": x.input,
-                "output": x.output,
-            }
-            for x in messages
+            x.model_dump(mode="python")
+            for x in messages.messages_list
         ]
         if strict:
             rows = [
@@ -341,7 +335,7 @@ class LLMDatasetBase(BaseModel):
                 for x in vals
             ]
         else:
-            rows = [DatasetRow(**x | {"llm": x["llm"]}) for x in vals]
+            rows = [DatasetRow(**x) for x in vals]
         return cls(
             rows=[
                 x for x in rows if None not in [x, getattr(x, "input", None), getattr(x, "output", None)]
@@ -349,7 +343,7 @@ class LLMDatasetBase(BaseModel):
         )
     
     @classmethod
-    def from_dataset(cls, d: Dataset, llm_type: LLMType, strict: bool = False):
+    def from_dataset(cls, d: Dataset, strict: bool = False):
         return cls.from_messages(AlpacaMessagesList.from_dataset(d), strict)
     
     @classmethod
