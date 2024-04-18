@@ -30,7 +30,7 @@ class TextFormatter(MessagesFormatter):
             "content",
         )
         
-    def format_text(self, system: str, user: str, assistant: str) -> str:
+    def format_text(self, system: str = "", user: str = "", assistant: str = "") -> str:
         self.messages = [[
             {"role": self.system_key, "content": system},
             {"role": self.user_key, "content": user},
