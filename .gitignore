@@ -8,3 +8,7 @@ data/
 generated/
 __pycache__/
 *.pkl
+*.swp
+*.swo
+.deepeval-cache.json
+.temp-deepeval-cache.json

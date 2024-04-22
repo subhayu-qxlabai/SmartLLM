@@ -499,16 +499,17 @@ def run_evaluation(eval_dataset_path:Path):
     result = pd.concat([df,language_type_df],axis=1)
     current_time = datetime.now().strftime("%d%m%Y%H%M%S")
 
-    csv_path=directory_path / f"LLM1_eval_test_run_{current_time}.csv"
+    csv_path=directory_path / f"test_LLM1_eval_test_run_{current_time}.csv"
     columns_list = ['Question Understanding with Tasks Steps Accuracy (GEval) score', 'Output Format (GEval) score']
     column_averages = result[columns_list].mean()
-    #print(f"{column_averages=}")
-    #print(type(column_averages))
+    print(f"{column_averages=}")
+    print(type(column_averages))
     average_values={}
 
     average_values["Average QUTSA_GEval"]=result["Question Understanding with Tasks Steps Accuracy (GEval) score"].mean()
     average_values["Average Output_Format_GEval"]=result["Output Format (GEval) score"].mean()
 
+    print(f"{average_values=}")
 
     average_df = pd.DataFrame(column_averages).transpose()
 
@@ -519,8 +520,9 @@ def run_evaluation(eval_dataset_path:Path):
 
     return average_values
 
+
 directory_path = Path("eval_dataset_for_evaluation_metric")
-eval_dataset_path = directory_path / "new_eval_dataset.json"
+eval_dataset_path = directory_path / "testing.json"
 
 average_score=run_evaluation(eval_dataset_path)
 print(average_score)
